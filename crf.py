@@ -72,3 +72,4 @@ def x_seq_to_features_both(x, dict, charstop):
     for i in range(len(f)):
         f[i].update(fv[i])
     return f
+

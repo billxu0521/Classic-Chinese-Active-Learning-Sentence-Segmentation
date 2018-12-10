@@ -5,7 +5,6 @@ Created on Mon Dec 10 01:45:48 2018
 
 @author: billxu
 """
-
 import sys
 import glob
 import random
@@ -16,9 +15,8 @@ import util
 import datetime
 import numpy
 
-
-
-def dataary(li):
+#資料處理
+def dataary(li,gram):
     data = []
     for line in li:
         x, y = util.line_toseq(line, charstop)
@@ -26,7 +24,7 @@ def dataary(li):
         #print(y[:5])
     
         #這邊在做文本做gram
-        d = crf.x_seq_to_features_discrete(x, charstop,1), y
+        d = crf.x_seq_to_features_discrete(x, charstop,gram), y
         data.append(d)
     return data
 
@@ -41,7 +39,7 @@ def file_to_lines(filenames):
     file.close()
 
 #宣告起始資料
-material = 'data/24s/*'
+material = 'data/24s-1/*'
 size = 8
 trainportion = 0.9
 dictfile = 'data/vector/24scbow300.txt'
@@ -49,6 +47,7 @@ crfmethod = "l2sgd"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’
 charstop = True # True means label attributes to previous char
 features = 1 # 1=discrete; 2=vectors; 3=both
 random.seed(101)
+
 #訓練模型名稱
 modelname = material.replace('/','').replace('*','')+str(size)+str(charstop)+".m"
 rowdata = []
@@ -90,8 +89,9 @@ for i in range(len(rowdata)):
         testdataary = numpy.hstack((testdataary,rowdata[i]))
     
     #資料處理
-    traindata = dataary(traindataary)
-    testdata = dataary(testdataary)
+    traindata = dataary(traindataary,1)
+    testdata = dataary(testdataary,1)
+    
     #進行建模
     trainer = pycrfsuite.Trainer()
     for t in traindata:
