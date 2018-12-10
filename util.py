@@ -47,14 +47,19 @@ def line_toraw(line):
     #return re.sub('[%s]' % re.escape(puncts+"\n".decode('utf8')), '', line)
     return re.sub('[%s]' % re.escape(puncts+"\n"), '', line)
 
-def seq_to_line(x, y, charstop):
+def seq_to_line(x, y, charstop ,s_str ,n_str):
     assert len(x)==len(y)
     s = ""
-    for a, b in zip(x, y):
+    score = 0
+    for a, b ,c ,d in zip(x, y, s_str,n_str):
         if b =='S': b=','
         else: b=''
-        if charstop: s = s+a+b
-        else: s = s+b+a
+        if c >= d : score = c
+        else: score = d
+        score = (score - 0.5) * 10
+        score =  float('%2.2f' % score)
+        if charstop: s = s+a+'('+ str(score) +')'+b
+        else: s = s+b+a+'('+str(c)+'/'+str(d)+')'
     return s
 
 def decode_totext(rawtext, outputs, charstop):

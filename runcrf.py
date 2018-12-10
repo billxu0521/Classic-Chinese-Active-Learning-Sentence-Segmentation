@@ -43,7 +43,6 @@ if features > 1:
 li = [line for line in util.file_to_lines(glob.glob(material))]#已經切成陣列
 #random.shuffle(li)#做亂數取樣
 #li = li[:size]
-print(li)
 
 # Prepare data: list of x(char), y(label) sequences
 
@@ -62,7 +61,7 @@ def dataary(li):
 
 data = dataary(li)
 #print(data)
-'''
+
 #date = [(['劉','敬','者','齊','人','也','漢','五','年'], ['S', 'S', 'N','S', 'N', 'N','N', 'S', 'N'])]
 traindata = data[:cut]
 #traindata = date
@@ -94,10 +93,56 @@ tagger.dump(modelname+".txt")
 
 print (datetime.datetime.now())
 print ("Start testing...")
+
+results = []
+lines = []
+Spp = []
+Npp = []
+#while data:
+for index in range(len(testdata)):
+    print(len(testdata))
+    xseq, yref = testdata.pop(0)
+    yout = tagger.tag(xseq)
+    sp = 0
+    np = 0
+    for i in range(len(yout)):
+        sp = tagger.marginal('S',i)
+        Spp.append(sp) #S標記的機率
+        print(sp)
+        np = tagger.marginal('N',i) 
+        Npp.append(np)#Nㄅ標記的機率
+        print(np)
+    results.append(util.eval(yref, yout, "S"))
+    lines.append(util.seq_to_line([x['gs0'] for x in xseq],yout,charstop,Spp,Npp))
+    #print(util.seq_to_line([x['gs0'] for x in xseq], (str(sp) +'/'+ str(np)),charstop))
+
+U_score = 0
+p_Scount = 0
+p_Ncount = 0
+for i in range(len(Spp)):
+    _s = 0
+    if Spp[i] > Npp[i]:
+        _s = Spp[i]
+    else :_s = Npp[i]
+    _s = (_s - 0.5) * 10
+    U_score = U_score + _s
+    p_Scount = p_Scount + Spp[i]
+    p_Ncount = p_Ncount + Npp[i]
+   
+tp, fp, fn, tn = zip(*results)
+tp, fp, fn, tn = sum(tp), sum(fp), sum(fn), sum(tn)
+
+p, r = tp/(tp+fp), tp/(tp+fn)
+print ("=================")
+print ("character count:" + str(len(Spp)))
+print("block uncertain rate:" + str((U_score / len(Spp))))    
+
+'''
 results = []
 while testdata:
     x, yref = testdata.pop()
     yout = tagger.tag(x)
+    print(yref)
     pr = tagger.probability(yref)
     results.append(util.eval(yref, yout, "S"))
 tp, fp, fn, tn = zip(*results)
@@ -110,10 +155,12 @@ print ("Total S in OUT:", tp+fp)
 print ("Presicion:", p)
 print ("Recall:", r)
 print ("*******************F1-score:", 2*p*r/(p+r))
-'''
-'''
+
+
 print (datetime.datetime.now())
 print ("Start closed testing...")
+'''
+'''
 results = []
 #test_y = ['S', 'N', 'N','S', 'S', 'N','S', 'S', 'S']
     
