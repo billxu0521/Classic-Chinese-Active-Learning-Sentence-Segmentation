@@ -7,7 +7,7 @@ import crf
 import util
 import datetime
 
-material = 'data/24s/*'
+material = 'data/24s-1/*'
 #material = "data/sjw/A05*"
 size = 8
 trainportion = 0.9
@@ -41,26 +41,28 @@ if features > 1:
     vdict = util.readvec(dictfile)#先處理文本
     print ("Dict:", dictfile)
 li = [line for line in util.file_to_lines(glob.glob(material))]#已經切成陣列
-random.shuffle(li)#做亂數取樣
-li = li[:size]
+#random.shuffle(li)#做亂數取樣
+#li = li[:size]
+print(li)
 
 # Prepare data: list of x(char), y(label) sequences
-data = []
 
-for line in li:
-    x, y = util.line_toseq(line, charstop)
-    #print(x)
-    #print(y[:5])
 
-    #這邊在做文本做gram
-    if features == 1:
-        d = crf.x_seq_to_features_discrete(x, charstop), y
-    elif features == 2:
-        d = crf.x_seq_to_features_vector(x, vdict, charstop), y
-    elif features == 3:
-        d = crf.x_seq_to_features_both(x, vdict, charstop), y
-    data.append(d)
+def dataary(li):
+    data = []
+    for line in li:
+        x, y = util.line_toseq(line, charstop)
+        #print(x)
+        #print(y[:5])
+    
+        #這邊在做文本做gram
+        d = crf.x_seq_to_features_discrete(x, charstop,1), y
+        data.append(d)
+    return data
 
+data = dataary(li)
+#print(data)
+'''
 #date = [(['劉','敬','者','齊','人','也','漢','五','年'], ['S', 'S', 'N','S', 'N', 'N','N', 'S', 'N'])]
 traindata = data[:cut]
 #traindata = date
@@ -89,7 +91,7 @@ tagger.open(modelname)
 tagger.dump(modelname+".txt")
 
 #print(tagger.marginal('S',1))
-'''
+
 print (datetime.datetime.now())
 print ("Start testing...")
 results = []
@@ -108,7 +110,7 @@ print ("Total S in OUT:", tp+fp)
 print ("Presicion:", p)
 print ("Recall:", r)
 print ("*******************F1-score:", 2*p*r/(p+r))
-
+'''
 '''
 print (datetime.datetime.now())
 print ("Start closed testing...")
@@ -136,3 +138,4 @@ print ("*******************:", pr)
 print ("*******************:", pp)
 print ("*******************:", yout)
 print (datetime.datetime.now())
+'''

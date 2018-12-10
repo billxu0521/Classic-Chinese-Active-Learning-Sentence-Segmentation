@@ -5,11 +5,10 @@
 # x是陣列 charstop是要不要用前置斷句
 def x_seq_to_features_discrete(x, charstop,gram):
     
-    if gram == 2:
+    if gram == 1:
         # features are for 2 chars before and after Segmentation
         # 1-gram and 2-gram
-        if charstop: findex = [-1,0,1,2]
-        else: findex = [-2,-1,0,1]
+        findex = [-1,0,1,2]
         xf = []
         ran = range(len(x)) #陣列長度
         for i in ran: 
@@ -27,8 +26,7 @@ def x_seq_to_features_discrete(x, charstop,gram):
             xf.append(mydict)
         return xf
     elif gram == 2:
-        if charstop: findex = [-1,0,1,2]
-        else: findex = [-2,-1,0,1]
+        findex = [-3,-2,-1,0,1,2,3]
         xf = []
         ran = range(len(x)) #陣列長度
         for i in ran: 
@@ -43,12 +41,15 @@ def x_seq_to_features_discrete(x, charstop,gram):
                 if i+j in ran and i+j+1 in ran:
                     mydict["gd"+str(j)]=x[i+j]+x[i+j+1]
                     
+            # 3-gram
+            for j in findex[:5]:
+                if i+j in ran and i+j+1 and i+j+2 in ran:
+                    mydict["gf"+str(j)]=x[i+j]+x[i+j+1]+x[i+j+2]
+                    
             xf.append(mydict)
         return xf
         
-        
-        return xf
-
+    
 def x_seq_to_features_vector(x, dict, charstop):
     if charstop: findex = [-1,0,1,2]
     else: findex = [-2,-1,0,1]

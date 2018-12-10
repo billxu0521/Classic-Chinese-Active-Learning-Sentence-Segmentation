@@ -4,6 +4,7 @@ import math
 puncts = "\t .!?#$%&\'()*+,-/:;<=>@[\]^_`{|}~！？｡。'\"＂＃＄％＆＇（）＊＋，－／：；＜＝＞＠［＼］＾＿｀｛｜｝～｟｠｢｣､、〃《》「」『』【】〔〕〖〗〘〙〚〛〜〝〞〟〰〾〿–—‘’‛“”„‟…‧﹏'·"
 
 def file_to_lines(filenames):
+    print(filenames)
     for fn in filenames:
         file = open(fn, 'r')
         for line in file:
