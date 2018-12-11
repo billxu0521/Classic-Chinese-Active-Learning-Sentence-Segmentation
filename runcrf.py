@@ -66,7 +66,7 @@ data = dataary(li)
 traindata = data[:cut]
 #traindata = date
 testdata = data[cut:]
-print(traindata)
+print(testdata)
 
 trainer = pycrfsuite.Trainer()
 #print trainer.params()
@@ -108,10 +108,10 @@ for index in range(len(testdata)):
     for i in range(len(yout)):
         sp = tagger.marginal('S',i)
         Spp.append(sp) #S標記的機率
-        print(sp)
+        #print(sp)
         np = tagger.marginal('N',i) 
         Npp.append(np)#Nㄅ標記的機率
-        print(np)
+        #print(np)
     results.append(util.eval(yref, yout, "S"))
     lines.append(util.seq_to_line([x['gs0'] for x in xseq],yout,charstop,Spp,Npp))
     #print(util.seq_to_line([x['gs0'] for x in xseq], (str(sp) +'/'+ str(np)),charstop))
@@ -137,12 +137,14 @@ print ("=================")
 print ("character count:" + str(len(Spp)))
 print("block uncertain rate:" + str((U_score / len(Spp))))    
 
-'''
+
 results = []
+print(testdata)
 while testdata:
     x, yref = testdata.pop()
     yout = tagger.tag(x)
-    print(yref)
+   
+    #print(yref)
     pr = tagger.probability(yref)
     results.append(util.eval(yref, yout, "S"))
 tp, fp, fn, tn = zip(*results)
@@ -159,7 +161,7 @@ print ("*******************F1-score:", 2*p*r/(p+r))
 
 print (datetime.datetime.now())
 print ("Start closed testing...")
-'''
+
 '''
 results = []
 #test_y = ['S', 'N', 'N','S', 'S', 'N','S', 'S', 'S']
