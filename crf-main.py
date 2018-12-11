@@ -70,6 +70,7 @@ for i in range(len(rowdata)):
     #訓練模型名稱
     modelname = material.replace('/','').replace('*','')+str(size)+str(charstop)+"_round_"+str(i)+".m"
     print('Round:',i+1)
+    log_text = "=====Round:" + str(i+1) + "======" + "\n"
     #依序成為訓練資料
     traindataidx[i] = 1
     #整理訓練資料與測試資料
@@ -120,28 +121,33 @@ for i in range(len(rowdata)):
     print (datetime.datetime.now())
     print ("Start closed testing...")
     results = []
-    
-    for testtext in testdata:
-        while testtext:
-            x, yref = testtext.pop()
-            yout = tagger.tag(x)
-            pr = tagger.probability(yref)
-            results.append(util.eval(yref, yout, "S"))
-            tp, fp, fn, tn = zip(*results)
-            tp, fp, fn, tn = sum(tp), sum(fp), sum(fn), sum(tn)
-            
-            p, r = tp/(tp+fp), tp/(tp+fn)
-            print ("Total tokens in Test Set:", tp+fp+fn+tn)
-            print ("Total S in REF:", tp+fn)
-            print ("Total S in OUT:", tp+fp)
-            print ("Presicion:", p)
-            print ("Recall:", r)
-            f_score = 2*p*r/(p+r)
-            print ("*******************F1-score:", f_score)
-            f.write("F1-Score:"+str(f_score)+'/n')
-            #print ("*******************:", pr)
-            #print ("*******************:", pp)
-            #print ("*******************:", yout)
+    f.write(str(log_text))
+    for j in range(len(testdata)):
+        x, yref = testdata[j].pop()
+        yout = tagger.tag(x)
+        pr = tagger.probability(yref)
+        results.append(util.eval(yref, yout, "S"))
+        tp, fp, fn, tn = zip(*results)
+        tp, fp, fn, tn = sum(tp), sum(fp), sum(fn), sum(tn)
+        
+        p, r = tp/(tp+fp), tp/(tp+fn)
+        f_score = 2*p*r/(p+r)
+        log_text = "----Doc Result:" + str(j+1) +"-----" + "\n"
+        log_text += "Total tokens in Test Set:" + str(tp+fp+fn+tn) +'\n'
+        log_text += "Total S in REF:" + str(tp+fn) +'\n'
+        log_text += "Total S in OUT:" + str(tp+fp) +'\n'
+        log_text += "Presicion:" + str(p) +'\n'
+        log_text += "Recall:" + str(r) +'\n'
+        log_text += "F1-Score:" + str(f_score) + '\n'
+        log_text += '\n' + "=============" + '\n'
+        print ("Total tokens in Test Set:", tp+fp+fn+tn)
+        print ("Total S in REF:", tp+fn)
+        print ("Total S in OUT:", tp+fp)
+        print ("Presicion:", p)
+        print ("Recall:", r)
+        print ("*******************F1-score:", f_score)
+        f.write(str(log_text))
+       
         
 '''
 def activesort():
