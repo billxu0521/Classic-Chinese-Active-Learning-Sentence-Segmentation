@@ -37,7 +37,6 @@ def file_to_lines(filenames):
         if len(line)>0:
             yield line
     file.close()
-    
 #宣告起始資料
 material = 'data/24s-1/*'
 size = 8
@@ -66,13 +65,22 @@ filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%
 filename = filedatetime +"log.txt"
 f = open(filename, 'w')
 
+text_score = [] #紀錄每個區塊的不確定
 for i in range(len(rowdata)):
+    print(sorted(text_score))
+    if text_score != []:
+        print(text_score[0][0])
+    text_score = []
     #訓練模型名稱
     modelname = material.replace('/','').replace('*','')+str(size)+str(charstop)+"_round_"+str(i)+".m"
     print('Round:',i+1)
     log_text = "=====Round:" + str(i+1) + "======" + "\n"
+    
     #依序成為訓練資料
-    traindataidx[i] = 1
+    if text_score != []:
+        traindataidx[int(text_score[0][0])] = 1
+    elif text_score == []:
+        traindataidx[i] = 1
     #整理訓練資料與測試資料
     trainidx = [] #作為訓練資料的索引
     testidx = [] #作為測試資料的索引
@@ -82,8 +90,9 @@ for i in range(len(rowdata)):
         elif traindataidx[a] == 0: #最後一次是空的
             testidx.append(a)
     if (i+1) == len(rowdata):
-        print('Last')
+        print('Last Round')
         break
+    log_text += "trindata:" +str(trainidx) + "\n"
     print('train:',trainidx)
     print('test:',testidx)
     
@@ -154,6 +163,9 @@ for i in range(len(rowdata)):
             p_Scount = p_Scount + Spp[i]
             p_Ncount = p_Ncount + Npp[i]
            
+        All_u_score = (U_score / len(Spp)) #區塊不確定性
+        text_score.append((str(testidx[j]),All_u_score))
+        
         tp, fp, fn, tn = zip(*results)
         tp, fp, fn, tn = sum(tp), sum(fp), sum(fn), sum(tn)
         
@@ -180,7 +192,7 @@ for i in range(len(rowdata)):
         print ("block uncertain rate:" + str((U_score / len(Spp)))) 
         f.write(str(log_text))
        
-        
+
 '''
 def activesort():
     for i in range(len(rowdata)):

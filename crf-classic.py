@@ -82,7 +82,7 @@ for i in range(len(rowdata)):
         elif traindataidx[a] == 0: #最後一次是空的
             testidx.append(a)
     if (i+1) == len(rowdata):
-        print('Last')
+        print('Last Round')
         break
     print('train:',trainidx)
     print('test:',testidx)
