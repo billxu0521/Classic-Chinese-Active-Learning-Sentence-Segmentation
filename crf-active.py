@@ -14,6 +14,7 @@ import util
 import datetime
 from urllib.parse import unquote
 import numpy
+import csv
 
 #資料處理
 def dataary(li,gram):
@@ -37,11 +38,7 @@ def file_to_lines(filenames):
         if len(line)>0:
             yield line
     file.close()
-'''
-test = [['a',1.2],['b',1.62],['c',1.1]]
-test.sort(key=lambda x:x[1])
-print(test)
-'''
+    
 #宣告起始資料
 material = 'data/24s-1/*'
 size = 8
@@ -67,18 +64,18 @@ print(traindataidx)
 
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
-filename = filedatetime +"log.txt"
-f = open(filename, 'w')
+f = open(filedatetime + "_log.txt", 'w')
+#csv欄位
+log_csv_text = [['Round','Block','Presicion','Recall','F1-score','Block-uncertain']]
 
 text_score = [] #紀錄每個區塊的不確定
 for i in range(len(rowdata)):
-    
-    print(text_score)
+    #第i回
+    roundtext = i+1
     text_score.sort(key=lambda x:x[1])
-    print(text_score)
     #訓練模型名稱
     modelname = material.replace('/','').replace('*','')+str(size)+str(charstop)+"_round_"+str(i)+".m"
-    print('Round:',i+1)
+    print('Round:',roundtext)
     log_text = "=====Round:" + str(i+1) + "======" + "\n"
     
     #依序成為訓練資料
@@ -141,6 +138,8 @@ for i in range(len(rowdata)):
     Npp = []
     f.write(str(log_text))
     for j in range(len(testdata)):
+        #第j區塊
+        blocktext = j+1
         xseq, yref = testdata[j].pop(0)
         yout = tagger.tag(xseq)
         sp = 0
@@ -178,7 +177,7 @@ for i in range(len(rowdata)):
         p, r = tp/(tp+fp), tp/(tp+fn)
         f_score = 2*p*r/(p+r)
         
-        log_text = "----Doc Result:" + str(j+1) +"-----" + "\n"
+        log_text = "----Doc Result:" + str(blocktext) +"-----" + "\n"
         log_text += "Total tokens in Test Set:" + str(tp+fp+fn+tn) +'\n'
         log_text += "Total S in REF:" + str(tp+fn) +'\n'
         log_text += "Total S in OUT:" + str(tp+fp) +'\n'
@@ -188,6 +187,7 @@ for i in range(len(rowdata)):
         log_text += "character count:" + str(len(Spp)) + '\n'
         log_text += "Uncertain-Score:" + str((U_score / len(Spp))) + '\n'
         log_text += '\n' + "=============" + '\n'
+        log_csv_text.append([str(roundtext),str(blocktext),str(p),str(r),str(f_score),str(All_u_score)])
         print ("Total tokens in Test Set:", tp+fp+fn+tn)
         print ("Total S in REF:", tp+fn)
         print ("Total S in OUT:", tp+fp)
@@ -197,4 +197,9 @@ for i in range(len(rowdata)):
         print ("character count:" + str(len(Spp)))
         print ("block uncertain rate:" + str((U_score / len(Spp)))) 
         f.write(str(log_text))
+#寫入csv
+with open(filedatetime + '.csv', 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    for list in log_csv_text:
+        writer.writerow(list)
 f.close()

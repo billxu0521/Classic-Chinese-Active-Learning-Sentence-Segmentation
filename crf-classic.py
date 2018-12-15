@@ -14,6 +14,7 @@ import util
 import datetime
 from urllib.parse import unquote
 import numpy
+import csv
 
 #資料處理
 def dataary(li,gram):
@@ -63,13 +64,15 @@ print(traindataidx)
 
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
-filename = filedatetime +"log.txt"
-f = open(filename, 'w')
-
+f = open(filedatetime + "_log.txt", 'w')
+#csv欄位
+log_csv_text = [['Round','Block','Presicion','Recall','F1-score']]
 for i in range(len(rowdata)):
+    #第i回
+    roundtext = i+1
     #訓練模型名稱
     modelname = material.replace('/','').replace('*','')+str(size)+str(charstop)+"_round_"+str(i)+".m"
-    print('Round:',i+1)
+    print('Round:',roundtext)
     log_text = "=====Round:" + str(i+1) + "======" + "\n"
     #依序成為訓練資料
     traindataidx[i] = 1
@@ -122,7 +125,10 @@ for i in range(len(rowdata)):
     print ("Start closed testing...")
     results = []
     f.write(str(log_text))
+    
     for j in range(len(testdata)):
+        #第j區塊
+        blocktext = j+1
         x, yref = testdata[j].pop()
         yout = tagger.tag(x)
         pr = tagger.probability(yref)
@@ -132,7 +138,7 @@ for i in range(len(rowdata)):
         
         p, r = tp/(tp+fp), tp/(tp+fn)
         f_score = 2*p*r/(p+r)
-        log_text = "----Doc Result:" + str(j+1) +"-----" + "\n"
+        log_text = "----Doc Result:" + str(blocktext) +"-----" + "\n"
         log_text += "Total tokens in Test Set:" + str(tp+fp+fn+tn) +'\n'
         log_text += "Total S in REF:" + str(tp+fn) +'\n'
         log_text += "Total S in OUT:" + str(tp+fp) +'\n'
@@ -140,6 +146,7 @@ for i in range(len(rowdata)):
         log_text += "Recall:" + str(r) +'\n'
         log_text += "F1-Score:" + str(f_score) + '\n'
         log_text += '\n' + "=============" + '\n'
+        log_csv_text.append([str(roundtext),str(blocktext),str(p),str(r),str(f_score)])
         print ("Total tokens in Test Set:", tp+fp+fn+tn)
         print ("Total S in REF:", tp+fn)
         print ("Total S in OUT:", tp+fp)
@@ -147,4 +154,9 @@ for i in range(len(rowdata)):
         print ("Recall:", r)
         print ("F1-score:", f_score)
         f.write(str(log_text))
+#寫入csv
+with open(filedatetime + '.csv', 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    for list in log_csv_text:
+        writer.writerow(list)
 f.close()
