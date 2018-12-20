@@ -33,11 +33,13 @@ def make_charset(list_of_sentences, includefreq):
     st = "".join(li)
     d = {}
     for u in st:
-        if d.has_key(u):
+        #if d.has_key(u):
+        if u in d:
             d[u]=d[u]+1
         else:
             d[u]=1
-    for u in d.keys():
+    #for u in d.keys():
+    for u in list(d.keys()):
         if d[u]<includefreq:
             del d[u]
     return d.keys()

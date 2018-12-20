@@ -52,6 +52,9 @@ random.seed(101)
 rowdata = []
 filenames = glob.glob(material)
  
+starttime = datetime.datetime.now()
+print ("Starting Time:",starttime)
+
 for fn in filenames:
     li = [line for line in file_to_lines(glob.glob(fn))]#已經切成陣列
     rowdata.append(li)
