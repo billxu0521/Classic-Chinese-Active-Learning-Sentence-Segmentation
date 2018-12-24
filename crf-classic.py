@@ -32,22 +32,22 @@ def dataary(li,gram):
 #讀檔
 def file_to_lines(filenames):
     file = open(fn, 'r')
+    allline = ""
     for line in file:
         #line = line.decode('utf8').replace('\n',"")
         line = line.replace('\n',"")
-        if len(line)>0:
-            yield line
+        if line != "":
+            allline += line
+        #if len(line)>0:
+        #    yield line
+    yield allline
     file.close()
     
 #宣告起始資料
-material = 'data/24s-1/*'
-size = 8
+material = 'data/24s-3/*'
 trainportion = 0.9
-dictfile = 'data/vector/24scbow300.txt'
 crfmethod = "l2sgd"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
-features = 1 # 1=discrete; 2=vectors; 3=both
-random.seed(101)
 
 rowdata = []
 filenames = glob.glob(material)
@@ -69,12 +69,12 @@ print(traindataidx)
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
 f = open(filedatetime + "_log.txt", 'w')
 #csv欄位
-log_csv_text = [['Round','Block','Presicion','Recall','F1-score']]
+log_csv_text = [['Round','Presicion','Recall','F1-score']]
 for i in range(len(rowdata)):
     #第i回
     roundtext = i+1
     #訓練模型名稱
-    modelname = material.replace('/','').replace('*','')+str(size)+str(charstop)+"_round_"+str(i)+".m"
+    modelname = material.replace('/','').replace('*','')+"_CRF_classic_round_"+str(i)+".m"
     print('Round:',roundtext)
     log_text = "=====Round:" + str(i+1) + "======" + "\n"
     #依序成為訓練資料
@@ -99,12 +99,13 @@ for i in range(len(rowdata)):
         traindataary = numpy.hstack((traindataary,rowdata[i]))
     testdataary = []
     for i in testidx:
-        testdataary = dataary(rowdata[i],1)
-        testdata.append(testdataary)
+        testdataary = numpy.hstack((testdataary,rowdata[i]))
+        #testdataary = dataary(rowdata[i],1)
+        #testdata.append(testdataary)
     
     #資料處理
     traindata = dataary(traindataary,1)
-    #testdata = dataary(testdataary,1)
+    testdata = dataary(testdataary,1)
     #進行建模
     trainer = pycrfsuite.Trainer()
     for t in traindata:
@@ -128,7 +129,39 @@ for i in range(len(rowdata)):
     print ("Start closed testing...")
     results = []
     f.write(str(log_text))
+    while testdata:
+        x, yref = testdata.pop()
+        yout = tagger.tag(x)
+        pr = tagger.probability(yref)
+        results.append(util.eval(yref, yout, "S"))
+    tp, fp, fn, tn = zip(*results)
+    tp, fp, fn, tn = sum(tp), sum(fp), sum(fn), sum(tn)
+    print(tp, fp, fn, tn)
+    if tp <= 0 or fp <= 0 :
+        p = 0
+        r = 0
+        f_score = 0
+    else :
+        p, r = tp/(tp+fp), tp/(tp+fn)
+        f_score = 2*p*r/(p+r)
     
+    log_text = "----Doc Result----\n"
+    log_text += "Total tokens in Test Set:" + str(tp+fp+fn+tn) +'\n'
+    log_text += "Total S in REF:" + str(tp+fn) +'\n'
+    log_text += "Total S in OUT:" + str(tp+fp) +'\n'
+    log_text += "Presicion:" + str(p) +'\n'
+    log_text += "Recall:" + str(r) +'\n'
+    log_text += "F1-Score:" + str(f_score) + '\n'
+    log_text += '\n' + "=============" + '\n'
+    log_csv_text.append([str(roundtext),str(p),str(r),str(f_score)])
+    print ("Total tokens in Test Set:", tp+fp+fn+tn)
+    print ("Total S in REF:", tp+fn)
+    print ("Total S in OUT:", tp+fp)
+    print ("Presicion:", p)
+    print ("Recall:", r)
+    print ("F1-score:", f_score)
+    f.write(str(log_text))
+    '''
     for j in range(len(testdata)):
         #第j區塊
         blocktext = j+1
@@ -138,9 +171,15 @@ for i in range(len(rowdata)):
         results.append(util.eval(yref, yout, "S"))
         tp, fp, fn, tn = zip(*results)
         tp, fp, fn, tn = sum(tp), sum(fp), sum(fn), sum(tn)
+        print(tp, fp, fn, tn)
+        if tp <= 0 or fp <= 0 :
+            p = 0
+            r = 0
+            f_score = 0
+        else :
+            p, r = tp/(tp+fp), tp/(tp+fn)
+            f_score = 2*p*r/(p+r)
         
-        p, r = tp/(tp+fp), tp/(tp+fn)
-        f_score = 2*p*r/(p+r)
         log_text = "----Doc Result:" + str(blocktext) +"-----" + "\n"
         log_text += "Total tokens in Test Set:" + str(tp+fp+fn+tn) +'\n'
         log_text += "Total S in REF:" + str(tp+fn) +'\n'
@@ -157,6 +196,8 @@ for i in range(len(rowdata)):
         print ("Recall:", r)
         print ("F1-score:", f_score)
         f.write(str(log_text))
+        '''
+        
 #寫入csv
 with open(filedatetime + '.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
