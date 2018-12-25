@@ -44,7 +44,7 @@ def file_to_lines(filenames):
     file.close()
     
 #宣告起始資料
-material = 'data/24s-3/*'
+material = 'data/shiji/*'
 trainportion = 0.9
 crfmethod = "l2sgd"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
