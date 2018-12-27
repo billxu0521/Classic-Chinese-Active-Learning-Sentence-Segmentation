@@ -45,10 +45,8 @@ def file_to_lines(filenames):
     
 #宣告起始資料
 material = 'data/shiji/*'
-trainportion = 0.9
 crfmethod = "l2sgd"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
-
 rowdata = []
 filenames = glob.glob(material)
  
@@ -70,13 +68,14 @@ filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%
 f = open(filedatetime + "_log.txt", 'w')
 #csv欄位
 log_csv_text = [['Round','Presicion','Recall','F1-score']]
+log_text = str(datetime.datetime.now())
 for i in range(len(rowdata)):
     #第i回
     roundtext = i+1
     #訓練模型名稱
     modelname = material.replace('/','').replace('*','')+"_CRF_classic_round_"+str(i)+".m"
     print('Round:',roundtext)
-    log_text = "=====Round:" + str(i+1) + "======" + "\n"
+    log_text += "=====Round:" + str(i+1) + "======" + "\n"
     #依序成為訓練資料
     traindataidx[i] = 1
     #整理訓練資料與測試資料
@@ -104,8 +103,8 @@ for i in range(len(rowdata)):
         #testdata.append(testdataary)
     
     #資料處理
-    traindata = dataary(traindataary,1)
-    testdata = dataary(testdataary,1)
+    traindata = dataary(traindataary,2)
+    testdata = dataary(testdataary,2)
     #進行建模
     trainer = pycrfsuite.Trainer()
     for t in traindata:
@@ -113,13 +112,10 @@ for i in range(len(rowdata)):
         trainer.append(x, y)
     
     trainer.select(crfmethod)#做訓練
-    trainer.set('max_iterations',10) #測試迴圈
-    #trainer.set('delta',0)
-    #print ("!!!!before train", datetime.datetime.now())
+    trainer.set('max_iterations',15) #測試迴圈
     trainer.train(modelname)
-    #print ("!!!!after train", datetime.datetime.now())
-    
     tagger = pycrfsuite.Tagger()
+    
     #建立訓練模型檔案
     tagger.open(modelname)
     tagger.dump(modelname+".txt")
@@ -130,7 +126,7 @@ for i in range(len(rowdata)):
     results = []
     f.write(str(log_text))
     while testdata:
-        x, yref = testdata.pop()
+        x, yref = testdata.pop(0)
         yout = tagger.tag(x)
         pr = tagger.probability(yref)
         results.append(util.eval(yref, yout, "S"))
@@ -153,6 +149,8 @@ for i in range(len(rowdata)):
     log_text += "Recall:" + str(r) +'\n'
     log_text += "F1-Score:" + str(f_score) + '\n'
     log_text += '\n' + "=============" + '\n'
+    log_text = str(datetime.datetime.now())
+    log_text += '\n'
     log_csv_text.append([str(roundtext),str(p),str(r),str(f_score)])
     print ("Total tokens in Test Set:", tp+fp+fn+tn)
     print ("Total S in REF:", tp+fn)

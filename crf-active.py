@@ -43,8 +43,7 @@ def file_to_lines(filenames):
     file.close()
     
 #宣告起始資料
-material = 'data/24s-3/*'
-trainportion = 0.9
+material = 'data/shiji/*'
 crfmethod = "l2sgd"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
 
@@ -68,6 +67,7 @@ filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%
 f = open(filedatetime + "_log.txt", 'w')
 #csv欄位
 log_csv_text = [['Round','Block','Presicion','Recall','F1-score','Block-uncertain']]
+log_text = str(datetime.datetime.now())
 text_obj = {}
 #整理文本區塊的資訊
 for i in range(len(rowdata)): #字數
@@ -88,7 +88,7 @@ for i in range(len(rowdata)):
     #訓練模型名稱
     modelname = material.replace('/','').replace('*','')+"_CRF_active_round_"+str(i)+".m"
     print('Round:',roundtext)
-    log_text = "=====Round:" + str(i+1) + "======" + "\n"
+    log_text += "=====Round:" + str(i+1) + "======" + "\n"
     
     #依序成為訓練資料
     if text_score != []:
@@ -235,6 +235,8 @@ for i in range(len(rowdata)):
     log_text += "character count:" + str(len(Spp)) + '\n'
     log_text += "Uncertain-Score:" + str((U_score / len(Spp))) + '\n'
     log_text += '\n' + "=============" + '\n'
+    log_text = str(datetime.datetime.now())
+    log_text += '\n'
     print(text_score)
     #紀錄每個區塊的不確定值
     for i in  range(len(text_score)):
