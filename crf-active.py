@@ -43,7 +43,7 @@ def file_to_lines(filenames):
     file.close()
     
 #宣告起始資料
-material = 'data/shiji/*'
+material = 'data/shiji-3/*'
 crfmethod = "l2sgd"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
 
@@ -57,26 +57,26 @@ for fn in filenames:
     li = [line for line in file_to_lines(glob.glob(fn))]#已經切成陣列
     rowdata.append(li)
 
-#print(rowdata)
-#rowdata = ['1111','2222','33333']
 #建立對應的陣列，作為判別是否成為訓練資料 0為不作為訓練資料 1為做訓練資料
 traindataidx = numpy.zeros(len(rowdata),int) #陣列長度
-
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
 f = open(filedatetime + "_log.txt", 'w')
 #csv欄位
-log_csv_text = [['Round','Block','Presicion','Recall','F1-score','Block-uncertain']]
-log_text = str(datetime.datetime.now())
-text_obj = {}
+log_csv_text = [['Type','Round','Test Part','Presicion','Recall','F1-score','U-score']]
+#資料處理
+alldata = []
+for i in rowdata:
+    alldata.append(dataary(i,1)) 
+
 #整理文本區塊的資訊
-for i in range(len(rowdata)): #字數
+text_obj = {}
+for i in range(len(alldata)): #字數
     count = 0
     roundtext = i #序號 從0開始
     rowdatarya = dataary(rowdata[i],1) #整理內文
     count += len(rowdatarya[0][0])
     text_obj[roundtext]=([count,0])
-print(text_obj)
 
 text_score = [] #紀錄每個區塊的不確定
 for i in range(len(rowdata)):
@@ -88,6 +88,7 @@ for i in range(len(rowdata)):
     #訓練模型名稱
     modelname = material.replace('/','').replace('*','')+"_CRF_active_round_"+str(i)+".m"
     print('Round:',roundtext)
+    log_text = 'Starting Time:' + str(datetime.datetime.now()) + '\n'
     log_text += "=====Round:" + str(i+1) + "======" + "\n"
     
     #依序成為訓練資料
@@ -95,7 +96,6 @@ for i in range(len(rowdata)):
         traindataidx[int(text_score[0][0])] = 1
     elif text_score == []:
         traindataidx[i] = 1
-    print(traindataidx)
     #整理訓練資料與測試資料
     trainidx = [] #作為訓練資料的索引
     testidx = [] #作為測試資料的索引
@@ -114,12 +114,24 @@ for i in range(len(rowdata)):
     text_score = [] #重置
     traindataary = []
     testdata = []
+    traindata = []
     testtextidx = [] #每段文本長度
     count = 0 #計算文本長度
-    for i in trainidx:
-        traindataary = numpy.hstack((traindataary,rowdata[i]))
     testdataary = []
     countary = []
+    
+    for i in trainidx:
+        _data = alldata[i][0][0],alldata[i][0][1]
+        traindata.append(_data)
+
+    for i in testidx:
+        countary = dataary(rowdata[i],1)
+        count = len(countary[0][0])
+        _data = alldata[i][0][0],alldata[i][0][1]
+        testdata.append(_data)
+        testtextidx.append(count)
+        
+    '''
     for i in testidx:
         countary = dataary(rowdata[i],1)
         count = len(countary[0][0])
@@ -128,13 +140,15 @@ for i in range(len(rowdata)):
         testtextidx.append(count)
         #testdataary = dataary(rowdata[i],1)
         #testdata.append(testdataary)
-        
-    print('testtextidx:',testtextidx)
+    '''
+    
+    '''
     #資料處理
     traindata = dataary(traindataary,1)
     testdata = dataary(testdataary,1)
     print(len(testdata[0][1]))
-
+    '''
+    
     #進行建模
     trainer = pycrfsuite.Trainer()
     for t in traindata:
@@ -162,11 +176,13 @@ for i in range(len(rowdata)):
     Npp = []
     all_len= 0
     f.write(str(log_text))
+    log_text = ''
     while testdata:
         xseq, yref = testdata.pop(0)
+        #print(xseq)
         yout = tagger.tag(xseq)
         all_len += len(yout)
-        print(len(xseq),len(yout),all_len)
+        #print(len(xseq),len(yout),all_len)
         sp = 0
         np = 0
         for i in range(len(yout)):
@@ -204,7 +220,7 @@ for i in range(len(rowdata)):
             start = end
         end = text_obj[testidx[i]][0]
         #print(text_obj[testidx[i]])
-        print(len(score_array),end)
+        #print(len(score_array),end)
         for a in range(start,end):
             text_count = text_obj[testidx[i]][0]
             U_score += score_array[a]
@@ -212,11 +228,11 @@ for i in range(len(rowdata)):
         text_obj[testidx[i]][1] = U_score
         All_u_score += U_score
         text_score.append([str(testidx[i]),U_score])
-    #All_u_score = (U_score / len(Spp)) #區塊不確定性
-        
+    #All_u_score = (U_score / len(Spp)) #區塊不確定性   
     tp, fp, fn, tn = zip(*results)
     tp, fp, fn, tn = sum(tp), sum(fp), sum(fn), sum(tn)
-    
+    print(tp, fp, fn, tn)
+
     if tp <= 0 or fp <= 0 :
         p = 0
         r = 0
@@ -225,7 +241,7 @@ for i in range(len(rowdata)):
         p, r = tp/(tp+fp), tp/(tp+fn)
         f_score = 2*p*r/(p+r)
     
-    log_text = "----Doc Result-----" + "\n"
+    log_text += "----Doc Result-----" + "\n"
     log_text += "Total tokens in Test Set:" + str(tp+fp+fn+tn) +'\n'
     log_text += "Total S in REF:" + str(tp+fn) +'\n'
     log_text += "Total S in OUT:" + str(tp+fp) +'\n'
@@ -235,12 +251,13 @@ for i in range(len(rowdata)):
     log_text += "character count:" + str(len(Spp)) + '\n'
     log_text += "Uncertain-Score:" + str((U_score / len(Spp))) + '\n'
     log_text += '\n' + "=============" + '\n'
-    log_text = str(datetime.datetime.now())
+    log_text += 'End Time:' + str(datetime.datetime.now()) + '\n'
     log_text += '\n'
-    print(text_score)
+    #print(text_score)
     #紀錄每個區塊的不確定值
-    for i in  range(len(text_score)):
-        log_csv_text.append([str(roundtext),str(i),str(p),str(r),str(f_score),str(text_score[i])])
+    log_csv_text.append(['test-score',str(roundtext),'',str(p),str(r),str(f_score),''])
+    for a in  range(len(text_score)):
+        log_csv_text.append(['Un-score',str(roundtext),str(a),'','','',str(text_score[a])])
     print ("Total tokens in Test Set:", tp+fp+fn+tn)
     print ("Total S in REF:", tp+fn)
     print ("Total S in OUT:", tp+fp)
@@ -250,6 +267,7 @@ for i in range(len(rowdata)):
     print ("character count:" + str(len(Spp)))
     print ("block uncertain rate:" + str((U_score / len(Spp)))) 
     f.write(str(log_text))
+    log_text = ''
 
 '''
     for j in range(len(testdata)):
