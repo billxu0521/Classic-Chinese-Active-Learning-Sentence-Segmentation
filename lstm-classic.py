@@ -18,7 +18,9 @@ from keras.models import Sequential
 from keras.callbacks import Callback
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
-from keras.layers import Dense, Dropout, Embedding, LSTM, Bidirectional
+from keras.layers import Dense, Dropout, Embedding, LSTM, Bidirectional,InputLayer,Activation
+from keras.utils.np_utils import to_categorical
+from keras.optimizers import Adam
 
 
 #讀檔
@@ -136,30 +138,31 @@ for i in range(len(rowdata)):
         else: dataset.append(util.seq_to_sparsevec(x,y,charset))
         if not len(traindataary)%1000: print ("len(dataset_train)", len(traindataary))
     dataset_train = dataset
-    
-    look_back = 1
-    
+    print(len(dataset_train[0][0]),len(dataset_train[0][1]))
+
     trainX = numpy.array(dataset_train[0][0])
-    trainY = numpy.array(dataset_train[0][1])
-    
+    input_shape = trainX.shape[1]
+
     trainX = numpy.reshape(trainX, (trainX.shape[0],1, trainX.shape[1]))
-
-    max_features = 600
-    maxlen = 50
-
-
+    print(trainX.shape[0])
+    #x_test = np.reshape(x_test, (x_test.shape[0], 1, x_test.shape[1]))
+    trainY = to_categorical(dataset_train[0][1])
+    
     #進行建模設定
     model = Sequential()
-    model.add(Bidirectional(LSTM(units=20),input_shape=(1,50))) 
-    model.add(Dense(1, activation='sigmoid'))
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.add(InputLayer(input_shape=(1, 50)))
+    model.add(Bidirectional(LSTM(1)))
+    model.add(Activation('relu'))
+    model.add(Dense(2))
+    model.compile(loss='binary_crossentropy',
+                  optimizer=Adam(0.001),
+                  metrics=['accuracy'])
     model.summary()
-    
     #建立訓練模型檔案
 
-    #model.fit(trainX, trainY, validation_data=(trainX, trainY),epochs=10, batch_size=1, verbose=2)
-    model.fit(trainX, trainY,batch_size=1,epochs=10,validation_data=[trainX, trainY],verbose=2)
- 
+    model.fit(trainX, trainY, validation_data=(trainX, trainY),epochs=10, batch_size=32, verbose=2)
+
+    
     #開始測試
     print (datetime.datetime.now())
     print ("Start closed testing...")
@@ -180,9 +183,10 @@ for i in range(len(rowdata)):
         
         dataset_test = dataset
         testX = numpy.array(dataset_test[0][0])
-        testY = numpy.array(dataset_test[0][1])
+        #testY = numpy.array(dataset_test[0][1])
         testX = numpy.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
-        
+        testY = to_categorical(dataset_train[0][1])
+
         #第j區塊
         blocktext = j+1
         scores = model.evaluate(testX, testY, verbose=2)  
@@ -206,19 +210,19 @@ for i in range(len(rowdata)):
         print ("Recall:", r)
         print ("F1-score:", f_score)
         f.write(str(log_text))
-        '''
         log_text = "----Doc Result:" + str(blocktext) +"-----" + "\n"
-        log_text += "Total tokens in Test Set:" + str(tp+fp+fn+tn) +'\n'
+        #log_text += "Total tokens in Test Set:" + str(tp+fp+fn+tn) +'\n'
         #log_text += "Total S in REF:" + str(tp+fn) +'\n'
         #log_text += "Total S in OUT:" + str(tp+fp) +'\n'
-        print ("Total tokens in Test Set:", tp+fp+fn+tn)
+        #print ("Total tokens in Test Set:", tp+fp+fn+tn)
         #print ("Total S in REF:", tp+fn)
         #print ("Total S in OUT:", tp+fp)
-        '''
-
+        
+'''
 #寫入csv
 with open(filedatetime + '.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     for list in log_csv_text:
         writer.writerow(list)
 f.close()
+'''

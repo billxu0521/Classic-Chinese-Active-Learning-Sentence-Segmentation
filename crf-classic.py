@@ -43,7 +43,7 @@ def file_to_lines(filenames):
     file.close()
     
 #宣告起始資料
-material = 'data/shiji-3/*'
+material = 'data/sumen/*'
 crfmethod = "l2sgd"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
 rowdata = []
@@ -117,15 +117,16 @@ for i in range(len(alldata)):
         _data = alldata[i][0][0],alldata[i][0][1]
         testdata.append(_data)
     
+    
     #進行建模
     trainer = pycrfsuite.Trainer()
-    
     for t in traindata:
         x, y = t
         trainer.append(x, y)
-            
+    
     trainer.select(crfmethod)#做訓練
     trainer.set('max_iterations',10) #測試迴圈
+
     trainer.train(modelname)
     tagger = pycrfsuite.Tagger()
     
@@ -225,7 +226,9 @@ for i in range(len(alldata)):
     print ("Recall:", r)
     print ("F1-score:", f_score)
     f.write(str(log_text))
+    #重置
     log_text = ''
+    trainer.clear() 
         
 #寫入csv
 with open(filedatetime + '.csv', 'w', newline='') as csvfile:

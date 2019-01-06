@@ -44,7 +44,7 @@ def file_to_lines(filenames):
     
 #宣告起始資料
 material = 'data/shiji-3/*'
-crfmethod = "l2sgd"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
+crfmethod = "lbfgs"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
 
 rowdata = []
@@ -155,7 +155,7 @@ for i in range(len(rowdata)):
         x, y = t
         trainer.append(x, y)
     
-    trainer.select(crfmethod)#做訓練
+    trainer.select(crfmethod)  #做訓練
     trainer.set('max_iterations',10) #測試迴圈
     #trainer.set('delta',0)
     #print ("!!!!before train", datetime.datetime.now())
@@ -268,6 +268,7 @@ for i in range(len(rowdata)):
     print ("block uncertain rate:" + str((U_score / len(Spp)))) 
     f.write(str(log_text))
     log_text = ''
+    trainer.clear() 
 
 '''
     for j in range(len(testdata)):
