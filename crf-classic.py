@@ -43,7 +43,7 @@ def file_to_lines(filenames):
     file.close()
     
 #宣告起始資料
-material = 'data/sumen/*'
+material = 'data/sjw/*'
 crfmethod = "l2sgd"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
 rowdata = []
@@ -63,7 +63,7 @@ print(traindataidx)
 
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
-f = open(filedatetime + "_log.txt", 'w')
+f = open(filedatetime + "_CRF_classic_round_log.txt", 'w')
 #csv欄位
 log_csv_text = [['Type','Round','Test Part','Presicion','Recall','F1-score','U-score']]
 log_text = ''

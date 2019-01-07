@@ -61,7 +61,7 @@ for fn in filenames:
 traindataidx = numpy.zeros(len(rowdata),int) #陣列長度
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
-f = open(filedatetime + "_log.txt", 'w')
+f = open(filedatetime + "_CRF_active_round_log.txt", 'w')
 #csv欄位
 log_csv_text = [['Type','Round','Test Part','Presicion','Recall','F1-score','U-score']]
 #資料處理

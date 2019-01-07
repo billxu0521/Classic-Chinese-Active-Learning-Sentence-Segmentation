@@ -22,7 +22,6 @@ from keras.layers import Dense, Dropout, Embedding, LSTM, Bidirectional,InputLay
 from keras.utils.np_utils import to_categorical
 from keras.optimizers import Adam
 
-
 #讀檔
 def file_to_lines(filenames):
     file = open(fn, 'r')
@@ -33,8 +32,7 @@ def file_to_lines(filenames):
             yield line
     file.close()
     
-    
-    
+#計算F-score
 class Metrics(Callback):
     def on_train_begin(self, logs={}):
         self.val_f1s = []
@@ -54,24 +52,12 @@ class Metrics(Callback):
         print("— val_f1: %f "%_val_f1)
         return
 
-metrics = Metrics()
-
 #宣告起始資料
-material = 'data/24s-1/*'
-size = 8
-trainportion = 0.9
-validateportion = 0.05
-cut1 = int(size*trainportion)
-cut2 = int(size*(trainportion+validateportion))
+material = 'data/shiji-3/*'
 dictfile = 'data/vector/sjwsg50.txt'
 dense = True# 1 = dense, 0 = one-hot sparse
 charstop = True # True means label attributes to previous char
-modelname = material.replace('/','').replace('*','')+str(size)+"sg50"
-validate_interval = 10000
-hidden_size = 50
-learning_rate = 0.001
-random.seed(101)
-
+modelname = material.replace('/','').replace('*','')+"sg50"
 rowdata = []
 filenames = glob.glob(material)
 
@@ -93,13 +79,14 @@ traindataidx = numpy.zeros(len(rowdata),int) #陣列長度
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
 f = open(filedatetime + "_log.txt", 'w')
+
 #csv欄位
 log_csv_text = [['Round','Block','Presicion','Recall','F1-score']]
 for i in range(len(rowdata)):    
     #第i回
     roundtext = i+1
     #訓練模型名稱
-    modelname = material.replace('/','').replace('*','')+str(size)+str(charstop)+"_round_"+str(i)+".m"
+    modelname = material.replace('/','').replace('*','')+"_BiLSTM_classic_round_"+str(i)+".m"
     print('Round:',roundtext)
     log_text = "=====Round:" + str(i+1) + "======" + "\n"
     #依序成為訓練資料
@@ -120,11 +107,12 @@ for i in range(len(rowdata)):
     
     traindataary = []
     testdata = []
+    
     for i in trainidx:
         traindataary += rowdata[i]
     testdataary = []
+    
     for i in testidx:
-        #testdataary = dataary(rowdata[i],1)
         _data = rowdata[i]
         testdata.append(_data)
     
@@ -138,15 +126,14 @@ for i in range(len(rowdata)):
         else: dataset.append(util.seq_to_sparsevec(x,y,charset))
         if not len(traindataary)%1000: print ("len(dataset_train)", len(traindataary))
     dataset_train = dataset
-    print(len(dataset_train[0][0]),len(dataset_train[0][1]))
 
+    #資料集重新轉面
     trainX = numpy.array(dataset_train[0][0])
     input_shape = trainX.shape[1]
-
     trainX = numpy.reshape(trainX, (trainX.shape[0],1, trainX.shape[1]))
     print(trainX.shape[0])
-    #x_test = np.reshape(x_test, (x_test.shape[0], 1, x_test.shape[1]))
     trainY = to_categorical(dataset_train[0][1])
+    #trainY = dataset_train[0][1]
     
     #進行建模設定
     model = Sequential()
@@ -154,14 +141,13 @@ for i in range(len(rowdata)):
     model.add(Bidirectional(LSTM(1)))
     model.add(Activation('relu'))
     model.add(Dense(2))
-    model.compile(loss='binary_crossentropy',
+    model.compile(loss='binary_crossentropy', #categorical_crossentropy , binary_crossentropy
                   optimizer=Adam(0.001),
                   metrics=['accuracy'])
     model.summary()
-    #建立訓練模型檔案
-
-    model.fit(trainX, trainY, validation_data=(trainX, trainY),epochs=10, batch_size=32, verbose=2)
-
+    
+    #訓練模型檔案
+    model.fit(trainX, trainY, validation_data=(trainX, trainY),epochs=20, batch_size=32, verbose=2)
     
     #開始測試
     print (datetime.datetime.now())
@@ -186,15 +172,16 @@ for i in range(len(rowdata)):
         #testY = numpy.array(dataset_test[0][1])
         testX = numpy.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
         testY = to_categorical(dataset_train[0][1])
+        #testY = dataset_train[0][1]
 
         #第j區塊
         blocktext = j+1
         scores = model.evaluate(testX, testY, verbose=2)  
         print('scores:',scores)
         testPredict = model.predict_classes(testX)
-        print('res:',testPredict)
+        #print('res:',testPredict)
         trainPro = model.predict_proba(testX)
-        print('pro:',trainPro)
+        #print('pro:',trainPro)
         #predict_classes = testPredict.reshape(-1)
         predict_classes = testPredict
         real_data = dataset_test[0][1]   #原始資料
@@ -218,11 +205,10 @@ for i in range(len(rowdata)):
         #print ("Total S in REF:", tp+fn)
         #print ("Total S in OUT:", tp+fp)
         
-'''
+
 #寫入csv
 with open(filedatetime + '.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     for list in log_csv_text:
         writer.writerow(list)
 f.close()
-'''
