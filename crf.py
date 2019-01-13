@@ -66,8 +66,8 @@ def x_seq_to_features_vector(x, dict, charstop):
         xf.append(mydict)
     return xf
 
-def x_seq_to_features_both(x, dict, charstop):
-    f = x_seq_to_features_discrete(x, charstop)
+def x_seq_to_features_both(x, dict, charstop,gram):
+    f = x_seq_to_features_discrete(x, charstop,gram)
     fv = x_seq_to_features_vector(x,dict, charstop)
     for i in range(len(f)):
         f[i].update(fv[i])

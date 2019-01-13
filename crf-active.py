@@ -17,14 +17,20 @@ import numpy
 import csv
 
 #資料處理
-def dataary(li,gram):
+def dataary(li,gram,features,vdict):
     data = []
     for line in li:
         x, y = util.line_toseq(line, charstop)
         #print(x)
         #print(y[:5])
         #這邊在做文本做gram
-        d = crf.x_seq_to_features_discrete(x, charstop,gram), y
+        if features == 1:
+            d = crf.x_seq_to_features_discrete(x, charstop,gram), y
+        elif features == 2:
+            d = crf.x_seq_to_features_vector(x, vdict, charstop), y
+        elif features == 3:
+            d = crf.x_seq_to_features_both(x, vdict, charstop,gram), y
+        #d = crf.x_seq_to_features_discrete(x, charstop,gram), y
         data.append(d)
     return data
 
@@ -43,12 +49,16 @@ def file_to_lines(filenames):
     file.close()
     
 #宣告起始資料
-material = 'data/shiji-3/*'
+dataname = 'sumen'
+material = 'data/' + dataname + '/*'
+dictfile = dataname + '_word2vec.model.txt'
 crfmethod = "lbfgs"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
-
 rowdata = []
+features = 3 #資料清洗模式
+gram = 1 #特徵樣板
 filenames = glob.glob(material)
+ft = open(str(dataname) + "_text.txt", 'w')
  
 starttime = datetime.datetime.now()
 print ("Starting Time:",starttime)
@@ -59,6 +69,12 @@ for fn in filenames:
 
 #建立對應的陣列，作為判別是否成為訓練資料 0為不作為訓練資料 1為做訓練資料
 traindataidx = numpy.zeros(len(rowdata),int) #陣列長度
+
+#讀取字典
+if features > 1:
+    vdict = util.readvec(dictfile)#先處理文本
+    print ("Dict:", dictfile)
+
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
 f = open(filedatetime + "_CRF_active_round_log.txt", 'w')
@@ -67,14 +83,14 @@ log_csv_text = [['Type','Round','Test Part','Presicion','Recall','F1-score','U-s
 #資料處理
 alldata = []
 for i in rowdata:
-    alldata.append(dataary(i,1)) 
+    alldata.append(dataary(i,gram,features,vdict)) 
 
 #整理文本區塊的資訊
 text_obj = {}
 for i in range(len(alldata)): #字數
     count = 0
     roundtext = i #序號 從0開始
-    rowdatarya = dataary(rowdata[i],1) #整理內文
+    rowdatarya = dataary(rowdata[i],gram,features,vdict) #整理內文
     count += len(rowdatarya[0][0])
     text_obj[roundtext]=([count,0])
 
@@ -104,9 +120,6 @@ for i in range(len(rowdata)):
             trainidx.append(a)
         elif traindataidx[a] == 0: #最後一次是空的
             testidx.append(a)
-    if (i+1) == len(rowdata):
-        print('Last Round')
-        break
     log_text += "use trindata:" +str(trainidx) + "\n"
     log_text += "u_score" +str(text_score) + "\n"
     print('train:',trainidx)
@@ -125,7 +138,7 @@ for i in range(len(rowdata)):
         traindata.append(_data)
 
     for i in testidx:
-        countary = dataary(rowdata[i],1)
+        countary = dataary(rowdata[i],gram,features,vdict)
         count = len(countary[0][0])
         _data = alldata[i][0][0],alldata[i][0][1]
         testdata.append(_data)
@@ -166,6 +179,10 @@ for i in range(len(rowdata)):
     #建立訓練模型檔案
     tagger.open(modelname)
     tagger.dump(modelname+".txt")
+    
+    if roundtext == len(rowdata):
+        print('Last Round')
+        break
     
     #開始測試
     print (datetime.datetime.now())
@@ -334,7 +351,7 @@ for i in range(len(rowdata)):
         '''
 
 #寫入csv
-with open(filedatetime + '.csv', 'w', newline='') as csvfile:
+with open(filedatetime + '_active.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     for list in log_csv_text:
         writer.writerow(list)
