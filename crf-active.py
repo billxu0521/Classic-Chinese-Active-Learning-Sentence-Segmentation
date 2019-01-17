@@ -160,11 +160,16 @@ for i in range(len(rowdata)):
             traindata.append(_d)
     print('traindata_seq:',len(traindata))           
    
-    rowtestdata = []
+    testdata_x = []
+    testdata_y = []
     for i in testidx:
         for a in alldata[i]:
-            _d = a[0],a[1]
-            testdata.append(_d)
+            testdata_x.extend(a[0])
+            testdata_y.extend(a[1])
+            #_d = a[0],a[1]
+            #testdata.append(_d)
+    test_data = testdata_x,testdata_y
+    testdata.append(test_data)
     print('testdata_seq:',len(testdata))
         
     '''
