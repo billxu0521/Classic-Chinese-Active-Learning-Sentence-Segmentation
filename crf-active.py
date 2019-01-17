@@ -50,7 +50,7 @@ def file_to_lines(filenames):
     file.close()    
     
 #宣告起始資料
-dataname = 'sumen'
+dataname = 'ws'
 material = 'data/' + dataname + '/*'
 dictfile = dataname + '_word2vec.model.txt'
 crfmethod = "lbfgs"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
@@ -70,6 +70,7 @@ for fn in filenames:
 
 #建立對應的陣列，作為判別是否成為訓練資料 0為不作為訓練資料 1為做訓練資料
 traindataidx = numpy.zeros(len(rowdata),int) #陣列長度
+vdict = []
 
 #讀取字典
 if features > 1:
@@ -78,7 +79,7 @@ if features > 1:
 
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
-f = open(filedatetime + "_CRF_classic_round_log.txt", 'w')
+f = open(filedatetime + "_" + str(dataname) + "_CRF_classic_round_log.txt", 'w')
 #csv欄位
 log_csv_text = [['Type','Round','Test Part','Presicion','Recall','F1-score','U-score']]
 log_text = ''
@@ -129,6 +130,8 @@ for i in range(len(rowdata)):
         traindataidx[int(text_score[0][0])] = 1
     elif text_score == []:
         traindataidx[i] = 1
+        
+    print(traindataidx)
     #整理訓練資料與測試資料
     trainidx = [] #作為訓練資料的索引
     testidx = [] #作為測試資料的索引
@@ -137,6 +140,7 @@ for i in range(len(rowdata)):
             trainidx.append(a)
         elif traindataidx[a] == 0: #最後一次是空的
             testidx.append(a)
+    print(trainidx)
     log_text += "use trindata:" +str(trainidx) + "\n"
     log_text += "u_score" +str(text_score) + "\n"
     print('train:',trainidx)
