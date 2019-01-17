@@ -19,7 +19,7 @@ import csv
 #資料處理
 def dataary(li,gram,features,vdict):
     data = []
-    for line in li:
+    for line in li:          
         x, y = util.line_toseq(line, charstop)
         #print(x)
         #print(y[:5])
@@ -32,20 +32,22 @@ def dataary(li,gram,features,vdict):
             d = crf.x_seq_to_features_both(x, vdict, charstop,gram), y
         #d = crf.x_seq_to_features_discrete(x, charstop,gram), y
         data.append(d)
+    
     return data
 
 #讀檔
 def file_to_lines(filenames):
+    print('open:',filenames)
     file = open(fn, 'r')
-    allline = ""
+    #allline = []
     for line in file:
         #line = line.decode('utf8').replace('\n',"")
         line = line.replace('\n',"")
-        if line != "":
-            allline += line
-        #if len(line)>0:
-        #    yield line
-    yield allline
+        #if line != "":
+            #allline.append(line)
+        if len(line)>0:
+            yield line
+    #yield allline
     file.close()    
 
 #宣告起始資料
@@ -55,24 +57,26 @@ dictfile = dataname + '_word2vec.model.txt'
 crfmethod = "l2sgd"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
 rowdata = []
-features = 3 #資料清洗模式
+features = 1 #資料清洗模式
 gram = 1 #特徵樣板
 filenames = glob.glob(material)
-ft = open(str(dataname) + "_text.txt", 'w')
 
 starttime = datetime.datetime.now()
 print ("Starting Time:",starttime)
-
+all_li = []
 for fn in filenames:
     li = [line for line in file_to_lines(glob.glob(fn))]#已經切成陣列
+    all_li += li
     rowdata.append(li)
-random.shuffle(rowdata)#做亂數取樣
+print(len(rowdata))
 
+#random.shuffle(rowdata)#做亂數取樣
+print('all_li:',len(all_li))
 #rowdata = ['1111','2222','33333']
 #建立對應的陣列，作為判別是否成為訓練資料 0為不作為訓練資料 1為做訓練資料
 traindataidx = numpy.zeros(len(rowdata),int) #陣列長度
 print(traindataidx)
-
+vdict = []
 #讀取字典
 if features > 1:
     vdict = util.readvec(dictfile)#先處理文本
@@ -86,20 +90,44 @@ log_csv_text = [['Type','Round','Test Part','Presicion','Recall','F1-score','U-s
 log_text = ''
 #資料處理
 alldata = []
-for i in rowdata:
-    alldata.append(dataary(i,gram,features,vdict)) 
-ft.write(str(alldata))
-ft.close()
+test = []
+all_text_count = 0
+#整理文本區塊的資訊
+text_obj = {}
+for a in range(len(rowdata)):
+    count = 0
+    _data = []
+    for x in rowdata[a]:
+        for i in x:
+            if i in util.puncts:
+                continue
+            else:
+                count += 1
+    roundtext = a #序號 從0開始
+    _d = dataary(rowdata[a],gram,features,vdict)
+    print('text_count:',count)
+    all_text_count += count
+    _data.extend(_d)    
+    print('data_seq:',len(_data))
+    text_obj[roundtext]=([count,0])
+    alldata.append(_data) 
+    log_text += 'Part:' + str(a) + '/count:' + str(count) +'\n' 
+print('alldata_seq:',len(alldata))
+print('alltext_count:',all_text_count)
+log_text += 'All_text_count:' + str(all_text_count)  +'\n'
+f.write(str(log_text))
+'''
 #整理文本區塊的資訊
 text_obj = {}
 for i in range(len(alldata)): #字數
     count = 0
     roundtext = i #序號 從0開始
-    rowdatarya = dataary(rowdata[i],1,features,vdict) #整理內文
-    count += len(rowdatarya[0][0])
+    for a in rowdata[i]:
+        rowdatarya = dataary(a,gram,features,vdict) #整理內文
+        count += len(rowdatarya[0][0])
     text_obj[roundtext]=([count,0])
     log_text += 'Part:' + str(i) + '<' + str(count) + '>' +'\n' 
-
+'''
 text_score = [] #紀錄每個區塊的不確定
 for i in range(len(alldata)):
     #第i回
@@ -120,36 +148,42 @@ for i in range(len(alldata)):
             trainidx.append(a)
         elif traindataidx[a] == 0: #最後一次是空的
             testidx.append(a)
-    
+   
     print('train:',trainidx)
     print('test:',testidx)
     text_score = [] #重置
     testdata = []
     traindata = []
+    c = 0
     for i in trainidx:
-        _data = alldata[i][0][0],alldata[i][0][1]
-        traindata.append(_data)
-
+        for a in alldata[i]:
+            _d = a[0],a[1]
+            traindata.append(_d)
+    print('traindata_seq:',len(traindata))           
+   
+    rowtestdata = []
     for i in testidx:
-        _data = alldata[i][0][0],alldata[i][0][1]
-        testdata.append(_data)
-    
-    
+        for a in alldata[i]:
+            _d = a[0],a[1]
+            testdata.append(_d)
+    print('testdata_seq:',len(testdata))
+   
     #進行建模
     trainer = pycrfsuite.Trainer()
     for t in traindata:
         x, y = t
         trainer.append(x, y)
-    
     trainer.select(crfmethod)#做訓練
     trainer.set('max_iterations',10) #測試迴圈
-
     trainer.train(modelname)
+    
     tagger = pycrfsuite.Tagger()
+    #modelname = 'dataws_CRF_classic_round_10.m'
     
     #建立訓練模型檔案
     tagger.open(modelname)
     tagger.dump(modelname+".txt")
+    
     if roundtext == len(rowdata):
         print('Last Round')
         break
@@ -163,7 +197,7 @@ for i in range(len(alldata)):
     all_len = 0 
     f.write(str(log_text))
     log_text = ''
-
+    
     while testdata:
         x, yref = testdata.pop(0)
         yout = tagger.tag(x)
@@ -194,6 +228,7 @@ for i in range(len(alldata)):
             p_Scount = p_Scount + Spp[i]
             p_Ncount = p_Ncount + Npp[i]
             score_array.append(_s)
+            
     for i in range(len(testidx)):
         U_score = 0 #文本區塊的不確定值
         text_count = 0 #字數

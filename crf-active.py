@@ -36,17 +36,18 @@ def dataary(li,gram,features,vdict):
 
 #讀檔
 def file_to_lines(filenames):
+    print('open:',filenames)
     file = open(fn, 'r')
-    allline = ""
+    #allline = []
     for line in file:
         #line = line.decode('utf8').replace('\n',"")
         line = line.replace('\n',"")
-        if line != "":
-            allline += line
-        #if len(line)>0:
-        #    yield line
-    yield allline
-    file.close()
+        #if line != "":
+            #allline.append(line)
+        if len(line)>0:
+            yield line
+    #yield allline
+    file.close()    
     
 #宣告起始資料
 dataname = 'sumen'
@@ -55,7 +56,7 @@ dictfile = dataname + '_word2vec.model.txt'
 crfmethod = "lbfgs"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
 rowdata = []
-features = 3 #資料清洗模式
+features = 1 #資料清洗模式
 gram = 1 #特徵樣板
 filenames = glob.glob(material)
 ft = open(str(dataname) + "_text.txt", 'w')
@@ -77,22 +78,38 @@ if features > 1:
 
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
-f = open(filedatetime + "_CRF_active_round_log.txt", 'w')
+f = open(filedatetime + "_CRF_classic_round_log.txt", 'w')
 #csv欄位
 log_csv_text = [['Type','Round','Test Part','Presicion','Recall','F1-score','U-score']]
+log_text = ''
 #資料處理
 alldata = []
-for i in rowdata:
-    alldata.append(dataary(i,gram,features,vdict)) 
-
+test = []
+all_text_count = 0
 #整理文本區塊的資訊
 text_obj = {}
-for i in range(len(alldata)): #字數
+for a in range(len(rowdata)):
     count = 0
-    roundtext = i #序號 從0開始
-    rowdatarya = dataary(rowdata[i],gram,features,vdict) #整理內文
-    count += len(rowdatarya[0][0])
+    _data = []
+    for x in rowdata[a]:
+        for i in x:
+            if i in util.puncts:
+                continue
+            else:
+                count += 1
+    roundtext = a #序號 從0開始
+    _d = dataary(rowdata[a],gram,features,vdict)
+    print('text_count:',count)
+    all_text_count += count
+    _data.extend(_d)    
+    print('data_seq:',len(_data))
     text_obj[roundtext]=([count,0])
+    alldata.append(_data) 
+    log_text += 'Part:' + str(a) + '/count:' + str(count) +'\n' 
+print('alldata_seq:',len(alldata))
+print('alltext_count:',all_text_count)
+log_text += 'All_text_count:' + str(all_text_count)  +'\n'
+f.write(str(log_text))
 
 text_score = [] #紀錄每個區塊的不確定
 for i in range(len(rowdata)):
@@ -134,15 +151,17 @@ for i in range(len(rowdata)):
     countary = []
     
     for i in trainidx:
-        _data = alldata[i][0][0],alldata[i][0][1]
-        traindata.append(_data)
-
+        for a in alldata[i]:
+            _d = a[0],a[1]
+            traindata.append(_d)
+    print('traindata_seq:',len(traindata))           
+   
+    rowtestdata = []
     for i in testidx:
-        countary = dataary(rowdata[i],gram,features,vdict)
-        count = len(countary[0][0])
-        _data = alldata[i][0][0],alldata[i][0][1]
-        testdata.append(_data)
-        testtextidx.append(count)
+        for a in alldata[i]:
+            _d = a[0],a[1]
+            testdata.append(_d)
+    print('testdata_seq:',len(testdata))
         
     '''
     for i in testidx:
