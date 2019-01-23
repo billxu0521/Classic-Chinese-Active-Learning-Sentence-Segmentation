@@ -10,11 +10,13 @@ import glob
 import random
 import pycrfsuite
 import crf
+import os
 import util
 import datetime
 from urllib.parse import unquote
 import numpy
 import csv
+from scipy.stats import linregress
 
 #資料處理
 def dataary(li,gram,features,vdict):
@@ -57,10 +59,11 @@ crfmethod = "lbfgs"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’
 charstop = True # True means label attributes to previous char
 rowdata = []
 features = 1 #資料清洗模式
-gram = 1 #特徵樣板
+gram = 2 #特徵樣板
 filenames = glob.glob(material)
-ft = open(str(dataname) + "_text.txt", 'w')
- 
+filenames = sorted(filenames)
+part_log = filenames #紀錄檔名
+u_score_log = [] #紀錄各區塊分數
 starttime = datetime.datetime.now()
 print ("Starting Time:",starttime)
 
@@ -79,10 +82,19 @@ if features > 1:
 
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
-f = open(filedatetime + "_" + str(dataname) + "_CRF_classic_round_log.txt", 'w')
-#csv欄位
+f = open(filedatetime + "_" + str(dataname) + "_CRF_active_round_log.txt", 'w')
+
+#這邊處理CSV需要的資訊
+all_pre = numpy.array([])
+all_recall = numpy.array([])
+all_fscore = numpy.array([])
+all_textcount = numpy.array([])
+all_segcount = numpy.array([])
+all_text_score = []#紀錄每個區塊的不確定
 log_csv_text = [['Type','Round','Test Part','Presicion','Recall','F1-score','U-score']]
+data_csv_text = [['','Presicion','Recall','F1-score']] #分析表標題
 log_text = ''
+
 #資料處理
 alldata = []
 test = []
@@ -91,22 +103,29 @@ all_text_count = 0
 text_obj = {}
 for a in range(len(rowdata)):
     count = 0
+    segcount = 0
     _data = []
     for x in rowdata[a]:
         for i in x:
             if i in util.puncts:
+                segcount += 1
                 continue
             else:
                 count += 1
     roundtext = a #序號 從0開始
     _d = dataary(rowdata[a],gram,features,vdict)
     print('text_count:',count)
+    all_textcount = numpy.append(all_textcount,count)
+    all_segcount = numpy.append(all_segcount,segcount)
     all_text_count += count
     _data.extend(_d)    
     print('data_seq:',len(_data))
     text_obj[roundtext]=([count,0])
     alldata.append(_data) 
     log_text += 'Part:' + str(a) + '/count:' + str(count) +'\n' 
+    data_csv_text[0].append(part_log[a])
+    all_text_score.append([None])
+    
 print('alldata_seq:',len(alldata))
 print('alltext_count:',all_text_count)
 log_text += 'All_text_count:' + str(all_text_count)  +'\n'
@@ -116,7 +135,7 @@ text_score = [] #紀錄每個區塊的不確定
 for i in range(len(rowdata)):
     #第i回
     roundtext = i+1
-    text_score.sort(key=lambda x:x[1])
+    text_score.sort(key=lambda x:x[1],reverse=True)
     if text_score != []:
         print(text_score)
     #訓練模型名稱
@@ -131,7 +150,6 @@ for i in range(len(rowdata)):
     elif text_score == []:
         traindataidx[i] = 1
         
-    print(traindataidx)
     #整理訓練資料與測試資料
     trainidx = [] #作為訓練資料的索引
     testidx = [] #作為測試資料的索引
@@ -140,7 +158,6 @@ for i in range(len(rowdata)):
             trainidx.append(a)
         elif traindataidx[a] == 0: #最後一次是空的
             testidx.append(a)
-    print(trainidx)
     log_text += "use trindata:" +str(trainidx) + "\n"
     log_text += "u_score" +str(text_score) + "\n"
     print('train:',trainidx)
@@ -159,36 +176,22 @@ for i in range(len(rowdata)):
             _d = a[0],a[1]
             traindata.append(_d)
     print('traindata_seq:',len(traindata))           
-   
-    testdata_x = []
-    testdata_y = []
+    #ft = open(dataname + str(roundtext) + 'test_log.txt', 'w')
+    #ft.write(str(traindata))
+    #ft.close()
+    
     for i in testidx:
+        testdata_x = []
+        testdata_y = []
         for a in alldata[i]:
-            testdata_x.extend(a[0])
-            testdata_y.extend(a[1])
+            #testdata_x.extend(a[0])
+            #testdata_y.extend(a[1])
             #_d = a[0],a[1]
             #testdata.append(_d)
-    test_data = testdata_x,testdata_y
-    testdata.append(test_data)
-    print('testdata_seq:',len(testdata))
-        
-    '''
-    for i in testidx:
-        countary = dataary(rowdata[i],1)
-        count = len(countary[0][0])
-        testdataary = numpy.hstack((testdataary,rowdata[i]))
-        print('count:',count)
-        testtextidx.append(count)
-        #testdataary = dataary(rowdata[i],1)
-        #testdata.append(testdataary)
-    '''
+            test_data = a[0],a[1]
+            testdata.append(test_data)
     
-    '''
-    #資料處理
-    traindata = dataary(traindataary,1)
-    testdata = dataary(testdataary,1)
-    print(len(testdata[0][1]))
-    '''
+    print('testdata_seq:',len(testdata))
     
     #進行建模
     trainer = pycrfsuite.Trainer()
@@ -197,7 +200,7 @@ for i in range(len(rowdata)):
         trainer.append(x, y)
     
     trainer.select(crfmethod)  #做訓練
-    trainer.set('max_iterations',10) #測試迴圈
+    trainer.set('max_iterations',30) #測試迴圈
     #trainer.set('delta',0)
     #print ("!!!!before train", datetime.datetime.now())
     trainer.train(modelname)
@@ -223,7 +226,7 @@ for i in range(len(rowdata)):
     f.write(str(log_text))
     log_text = ''
     while testdata:
-        xseq, yref = testdata.pop(0)
+        xseq, yref = testdata.pop()
         #print(xseq)
         yout = tagger.tag(xseq)
         all_len += len(yout)
@@ -243,17 +246,13 @@ for i in range(len(rowdata)):
         
         score_array = []
         All_u_score = 0
-        p_Scount = 0
-        p_Ncount = 0
         for i in range(len(Spp)):
             _s = 0
-            if Spp[i] > Npp[i]:
-                _s = Spp[i]
+            if Spp[i] > Npp[i]: _s = Spp[i]
             else :_s = Npp[i]
-            _s = (_s - 0.5) * 10
+            #_s = (_s - 0.5) * 10
+            _s = (1 - _s)
             #U_score = U_score + _s
-            p_Scount = p_Scount + Spp[i]
-            p_Ncount = p_Ncount + Npp[i]
             score_array.append(_s)
     for i in range(len(testidx)):
         U_score = 0 #文本區塊的不確定值
@@ -272,7 +271,8 @@ for i in range(len(rowdata)):
         U_score = U_score / text_count
         text_obj[testidx[i]][1] = U_score
         All_u_score += U_score
-        text_score.append([str(testidx[i]),U_score])
+        text_score.append([str(testidx[i]),U_score])  
+        all_text_score[testidx[i]].append(U_score)
     #All_u_score = (U_score / len(Spp)) #區塊不確定性   
     tp, fp, fn, tn = zip(*results)
     tp, fp, fn, tn = sum(tp), sum(fp), sum(fn), sum(tn)
@@ -294,93 +294,95 @@ for i in range(len(rowdata)):
     log_text += "Recall:" + str(r) +'\n'
     log_text += "F1-Score:" + str(f_score) + '\n'
     log_text += "character count:" + str(len(Spp)) + '\n'
-    log_text += "Uncertain-Score:" + str((U_score / len(Spp))) + '\n'
+    #log_text += "Uncertain-Score:" + str((U_score / len(Spp))) + '\n'
     log_text += '\n' + "=============" + '\n'
     log_text += 'End Time:' + str(datetime.datetime.now()) + '\n'
     log_text += '\n'
-    #print(text_score)
+    
+    #建立分析表資料
+    all_pre = numpy.append(all_pre,p)
+    all_recall = numpy.append(all_recall,r)
+    all_fscore = numpy.append(all_fscore,f_score)
+    _data_log = []
+    _data_log.append(str(p)) 
+    _data_log.append(str(r)) 
+    _data_log.append(str(f_score))
+    _data_log.extend([None] * len(rowdata))
+    
     #紀錄每個區塊的不確定值
     log_csv_text.append(['test-score',str(roundtext),'',str(p),str(r),str(f_score),''])
     for a in  range(len(text_score)):
-        log_csv_text.append(['Un-score',str(roundtext),str(a),'','','',str(text_score[a])])
+        log_csv_text.append(['Un-score',str(roundtext),str(text_score[a][0]),'','','',str(text_score[a][1])])
+        _data_log[int(text_score[a][0])+3] = str(text_score[a][1])
+    
+    _data_log.insert(0,str(roundtext))
+    data_csv_text.append(_data_log)
     print ("Total tokens in Test Set:", tp+fp+fn+tn)
     print ("Total S in REF:", tp+fn)
     print ("Total S in OUT:", tp+fp)
     print ("Presicion:", p)
     print ("Recall:", r)
     print ("F1-score:", f_score)
-    print ("character count:" + str(len(Spp)))
-    print ("block uncertain rate:" + str((U_score / len(Spp)))) 
     f.write(str(log_text))
+    #重置
     log_text = ''
     trainer.clear() 
 
-'''
-    for j in range(len(testdata)):
-        #第j區塊
-        blocktext = j+1
-        xseq, yref = testdata[j].pop()
-        yout = tagger.tag(xseq)
-        sp = 0
-        np = 0
-        for i in range(len(yout)):
-            sp = tagger.marginal('S',i)
-            Spp.append(sp) #S標記的機率
-            #print(sp)
-            np = tagger.marginal('N',i) 
-            Npp.append(np)#Nㄅ標記的機率
-            #print(np)
-        results.append(util.eval(yref, yout, "S"))
-        lines.append(util.seq_to_line([x['gs0'] for x in xseq],yout,charstop,Spp,Npp))
-        #print(util.seq_to_line([x['gs0'] for x in xseq], (str(sp) +'/'+ str(np)),charstop))
-        
-        U_score = 0
-        p_Scount = 0
-        p_Ncount = 0
-        for i in range(len(Spp)):
-            _s = 0
-            if Spp[i] > Npp[i]:
-                _s = Spp[i]
-            else :_s = Npp[i]
-            _s = (_s - 0.5) * 10
-            U_score = U_score + _s
-            p_Scount = p_Scount + Spp[i]
-            p_Ncount = p_Ncount + Npp[i]
-           
-        All_u_score = (U_score / len(Spp)) #區塊不確定性
-        text_score.append([str(testidx[j]),All_u_score])
-        
-        tp, fp, fn, tn = zip(*results)
-        tp, fp, fn, tn = sum(tp), sum(fp), sum(fn), sum(tn)
-        
-        p, r = tp/(tp+fp), tp/(tp+fn)
-        f_score = 2*p*r/(p+r)
-        
-        log_text = "----Doc Result:" + str(blocktext) +"-----" + "\n"
-        log_text += "Total tokens in Test Set:" + str(tp+fp+fn+tn) +'\n'
-        log_text += "Total S in REF:" + str(tp+fn) +'\n'
-        log_text += "Total S in OUT:" + str(tp+fp) +'\n'
-        log_text += "Presicion:" + str(p) +'\n'
-        log_text += "Recall:" + str(r) +'\n'
-        log_text += "F1-Score:" + str(f_score) + '\n'
-        log_text += "character count:" + str(len(Spp)) + '\n'
-        log_text += "Uncertain-Score:" + str((U_score / len(Spp))) + '\n'
-        log_text += '\n' + "=============" + '\n'
-        log_csv_text.append([str(roundtext),str(blocktext),str(p),str(r),str(f_score),str(All_u_score)])
-        print ("Total tokens in Test Set:", tp+fp+fn+tn)
-        print ("Total S in REF:", tp+fn)
-        print ("Total S in OUT:", tp+fp)
-        print ("Presicion:", p)
-        print ("Recall:", r)
-        print ("F1-score:", f_score)
-        print ("character count:" + str(len(Spp)))
-        print ("block uncertain rate:" + str((U_score / len(Spp)))) 
-        f.write(str(log_text))
-        '''
+#整理CSV需要的資料
+avr_pre = numpy.mean(all_pre)
+avr_recall = numpy.mean(all_recall)
+avr_fscore = numpy.mean(all_fscore)
+max_pre = numpy.max(all_pre)
+max_recall = numpy.max(all_recall)
+max_fscore = numpy.max(all_fscore)
+avr_data_log = ['Avr',avr_pre,avr_recall,avr_fscore]
+max_data_log = ['Max',max_pre,max_recall,max_fscore]
+all_count_log = ['AllTextCount','','',''] 
+all_segcount_log = ['AllSegCount','','',''] 
+all_textseg_log = ['','','','']  #斷句率
+avr_data = []
+slope_data_log = []
+for a in range(len(all_text_score)):
+    _all_u_score = 0
+    _count = 0
+    _slope_ary = []
+    for i in all_text_score[a]:
+        if i == None:continue
+        _count += 1
+        _all_u_score += i
+        _slope_ary.append(i)        
+    if _count <= 0:
+        avr_data_log.append('')
+        slope_data_log.append('')
+    else:
+        _avr = _all_u_score/_count
+        avr_data.append(_avr)
+        _x = numpy.arange(len(_slope_ary)) #計算斜率用
+        slope_res = linregress(_x, _slope_ary)   
+        slope_data_log.append(slope_res.slope)
+all_textseg = []  #斷句率
+for x in range(len(all_textcount)):
+    _a = all_textcount[x]/all_segcount[x]
+    all_textseg.append(_a)
+    
+max_data_log.extend(slope_data_log)
+avr_data_log.extend(avr_data)
+all_count_log.extend(all_textcount)
+all_segcount_log.extend(all_segcount)
+all_textseg_log.extend(all_textseg)
+data_csv_text.append(avr_data_log)
+data_csv_text.append(max_data_log)
+data_csv_text.append(all_count_log)
+data_csv_text.append(all_segcount_log)
+data_csv_text.append(all_textseg_log)
 
 #寫入csv
 with open(filedatetime + '_active.csv', 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
     for list in log_csv_text:
+        writer.writerow(list)
+with open(filedatetime + 'data_active.csv', 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    for list in data_csv_text:
         writer.writerow(list)
 f.close()
