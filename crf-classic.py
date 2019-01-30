@@ -331,19 +331,25 @@ for i in range(len(alldata)):
     trainer.clear() 
     
 #整理CSV需要的資料
+allround = (numpy.arange(len(rowdata) - 1)) #計算斜率用
 avr_pre = numpy.mean(all_pre)
 avr_recall = numpy.mean(all_recall)
 avr_fscore = numpy.mean(all_fscore)
 max_pre = numpy.max(all_pre)
 max_recall = numpy.max(all_recall)
 max_fscore = numpy.max(all_fscore)
+slope_pre = linregress(allround, all_pre.tolist())   
+slope_recall = linregress(allround, all_recall.tolist())   
+slope_fscore = linregress(allround, all_fscore.tolist())   
 avr_data_log = ['Avr',avr_pre,avr_recall,avr_fscore]
 max_data_log = ['Max',max_pre,max_recall,max_fscore]
+slope_data_log = ['Slope',slope_pre.slope,slope_recall.slope,slope_fscore.slope]
 all_count_log = ['AllTextCount','','',''] 
 all_segcount_log = ['AllSegCount','','',''] 
 all_textseg_log = ['','','','']  #斷句率
 avr_data = []
-slope_data_log = []
+max_data = []
+slope_data = []
 for a in range(len(all_text_score)):
     _all_u_score = 0
     _count = 0
@@ -352,31 +358,37 @@ for a in range(len(all_text_score)):
         if i == None:continue
         _count += 1
         _all_u_score += i
-        _slope_ary.append(i)        
+        _slope_ary.append(i)       
     if _count <= 0:
         avr_data_log.append('')
-        slope_data_log.append('')
+        slope_data.append('')
+        max_data.append('')
     else:
         _avr = _all_u_score/_count
         avr_data.append(_avr)
         _x = numpy.arange(len(_slope_ary)) #計算斜率用
         slope_res = linregress(_x, _slope_ary)   
-        slope_data_log.append(slope_res.slope)
+        slope_data.append(slope_res.slope)
+        _uscore_ary = numpy.array(_slope_ary)
+        _max = numpy.max(_uscore_ary)
+        max_data.append(_max) #個回合不確定最大值
 all_textseg = []  #斷句率
 for x in range(len(all_textcount)):
     _a = all_textcount[x]/all_segcount[x]
     all_textseg.append(_a)
-    
-max_data_log.extend(slope_data_log)
+max_data_log.extend(max_data)
+slope_data_log.extend(slope_data)
 avr_data_log.extend(avr_data)
 all_count_log.extend(all_textcount)
 all_segcount_log.extend(all_segcount)
 all_textseg_log.extend(all_textseg)
 data_csv_text.append(avr_data_log)
 data_csv_text.append(max_data_log)
+data_csv_text.append(slope_data_log)
 data_csv_text.append(all_count_log)
 data_csv_text.append(all_segcount_log)
 data_csv_text.append(all_textseg_log)
+
       
 #寫入csv
 with open(filedatetime + '_classic.csv', 'w', newline='') as csvfile:
