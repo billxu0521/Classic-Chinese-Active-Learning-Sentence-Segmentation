@@ -136,14 +136,21 @@ text_score = [] #紀錄每個區塊的不確定
 for i in range(len(alldata)):
     #第i回
     roundtext = i+1
+    text_score.sort(key=lambda x:x[1],reverse=True)
+    if text_score != []:
+        print(text_score)
     #訓練模型名稱
-    modelname = material.replace('/','').replace('*','')+"_BiLSTM_classic_round_"+str(i)+".h5"
+    modelname = material.replace('/','').replace('*','')+"_BiLSTM_active_round_"+str(i)+".h5"
     print('Round:',roundtext)
     log_text = 'Starting Time:' + str(datetime.datetime.now()) + '\n'
     log_text += "=====Round:" + str(i+1) + "======" + "\n"
     
     #依序成為訓練資料
-    traindataidx[i] = 1
+    if text_score != []:
+        traindataidx[int(text_score[0][0])] = 1
+    elif text_score == []:
+        traindataidx[i] = 1
+        
     #整理訓練資料與測試資料
     trainidx = [] #作為訓練資料的索引
     testidx = [] #作為測試資料的索引
@@ -220,7 +227,7 @@ for i in range(len(alldata)):
     
     model.summary()
     #進行建模
-    train_history = model.fit(x_train, y_train, batch_size=32, epochs=10, verbose=2)
+    train_history = model.fit(x_train, y_train, batch_size=32, epochs=2, verbose=2)
     
     #建立訓練模型檔案
     model.save(modelname)
