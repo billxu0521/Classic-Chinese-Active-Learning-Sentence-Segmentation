@@ -224,6 +224,7 @@ for i in range(len(alldata)):
     
     #建立訓練模型檔案
     model.save(modelname)
+    #model.load_weights('my_model_weights.h5')
 
     if roundtext == len(rowdata):
         print('Last Round')
