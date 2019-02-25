@@ -7,35 +7,38 @@ Created on Mon Dec 10 01:45:48 2018
 """
 import sys
 import glob
+import random
+import pycrfsuite
+import crf
 import util
 import datetime
 from urllib.parse import unquote
 import numpy
 import csv
-from keras.preprocessing import sequence  
-from keras.preprocessing.text import Tokenizer  
-import util
-from keras.models import Sequential  
-from keras.layers.core import Dense, Dropout, Activation, Flatten  
-from keras.layers.embeddings import Embedding  
-from keras.layers import Input,Activation,Embedding,LSTM,TimeDistributed,Dense,Bidirectional,InputLayer,Dropout,Flatten
-from keras.utils import to_categorical
-import numpy as np
-from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
 from scipy.stats import linregress
+import nltk
+from sklearn.svm import LinearSVC
+import pickle
+from sklearn.linear_model import LogisticRegression
+
 
 
 #資料處理
-def dataary(rowdata):
-    data_x = []
-    data_y = []
+def dataary(li,gram,features,vdict):
     data = []
-    while rowdata:
-        x, y = util.line_toseq(rowdata.pop(), charstop)
-        data_x.append(x)
-        data_y.append(y)
-
-    data.append([data_x,data_y])
+    for line in li:          
+        x, y = util.line_toseq(line, charstop)
+        #print(x)
+        #print(y[:5])
+        #這邊在做文本做gram
+        if features == 1:
+            d = crf.x_seq_to_features_discrete(x, charstop,gram), y
+        elif features == 2:
+            d = crf.x_seq_to_features_vector(x, vdict, charstop), y
+        elif features == 3:
+            d = crf.x_seq_to_features_both(x, vdict, charstop,gram), y
+        #d = crf.x_seq_to_features_discrete(x, charstop,gram), y
+        data.append(d)
     return data
 
 #讀檔
@@ -56,17 +59,17 @@ def file_to_lines(filenames):
 #宣告起始資料
 dataname = 'ws'
 material = 'data/' + dataname + '/*'
-rowdata = []
-#features = 1 #資料清洗模式
-#gram = 2 #特徵樣板
+dictfile = dataname + '_word2vec.model.txt'
+crfmethod = "lbfgs"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
+rowdata = []
+features = 1 #資料清洗模式
+gram = 2 #特徵樣板
 filenames = glob.glob(material)
 filenames = sorted(filenames)
 part_log = filenames #紀錄檔名
 u_score_log = [] #紀錄各區塊分數
 starttime = datetime.datetime.now()
-MAX_LEN_OF_TOKEN = 32  
-
 print ("Starting Time:",starttime)
 
 for fn in filenames:
@@ -79,10 +82,14 @@ for fn in filenames:
 traindataidx = numpy.zeros(len(rowdata),int) #陣列長度
 print(traindataidx)
 vdict = []
+#讀取字典
+if features > 1:
+    vdict = util.readvec(dictfile)#先處理文本
+    print ("Dict:", dictfile)
 
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
-f = open(filedatetime + "_" + str(dataname) + "_LSTM_classic_round_log.txt", 'w')
+f = open(filedatetime + "_" + str(dataname) + "_LR_classic_round_log.txt", 'w')
 
 #這邊處理CSV需要的資訊
 all_pre = numpy.array([])
@@ -113,7 +120,7 @@ for a in range(len(rowdata)):
             else:
                 count += 1
     roundtext = a #序號 從0開始
-    _d = dataary(rowdata[a])
+    _d = dataary(rowdata[a],gram,features,vdict)
     print('text_count:',count)
     all_textcount = numpy.append(all_textcount,count)
     all_segcount = numpy.append(all_segcount,segcount)
@@ -131,26 +138,30 @@ print('alltext_count:',all_text_count)
 log_text += 'All_text_count:' + str(all_text_count)  +'\n'
 f.write(str(log_text))
     
-
+'''
+#整理文本區塊的資訊
+text_obj = {}
+for i in range(len(alldata)): #字數
+    count = 0
+    roundtext = i #序號 從0開始
+    for a in rowdata[i]:
+        rowdatarya = dataary(a,gram,features,vdict) #整理內文
+        count += len(rowdatarya[0][0])
+    text_obj[roundtext]=([count,0])
+    log_text += 'Part:' + str(i) + '<' + str(count) + '>' +'\n' 
+'''
 text_score = [] #紀錄每個區塊的不確定
 for i in range(len(alldata)):
     #第i回
     roundtext = i+1
-    text_score.sort(key=lambda x:x[1],reverse=True)
-    if text_score != []:
-        print(text_score)
     #訓練模型名稱
-    modelname = material.replace('/','').replace('*','')+"_BiLSTM_active_round_"+str(i)+".h5"
+    modelname = material.replace('/','').replace('*','')+"_LR_classic_round_"+str(i)+".pickle"
     print('Round:',roundtext)
     log_text = 'Starting Time:' + str(datetime.datetime.now()) + '\n'
     log_text += "=====Round:" + str(i+1) + "======" + "\n"
     
     #依序成為訓練資料
-    if text_score != []:
-        traindataidx[int(text_score[0][0])] = 1
-    elif text_score == []:
-        traindataidx[i] = 1
-        
+    traindataidx[i] = 1
     #整理訓練資料與測試資料
     trainidx = [] #作為訓練資料的索引
     testidx = [] #作為測試資料的索引
@@ -170,73 +181,50 @@ for i in range(len(alldata)):
         for a in alldata[i]:
             _d = a[0],a[1]
             traindata.append(_d)
-            
+    print('traindata_seq:',len(traindata))           
+    #ft = open(dataname + str(roundtext) + '_c_test_log.txt', 'w')
+    #ft.write(str(traindata))
+    #ft.close()
+    
+    rowtestdata = []
+    
     for i in testidx:
+        testdata_x = []
+        testdata_y = []
         for a in alldata[i]:
-            _d = a[0],a[1]
-            testdata.append(_d)
-     
-    print('traindata_seq:',len(traindata))   
-         
-    trainrow_x = []
-    trainrow_y = []
- 
+            #testdata_x.extend(a[0])
+            #testdata_y.extend(a[1])
+            #_d = a[0],a[1]
+            #testdata.append(_d)
+            test_data = a[0],a[1]
+            testdata.append(test_data)
+
+    #ft = open(dataname + str(roundtext) + 'test_log.txt', 'w')
+    #ft.write(str(testdata))
+    #ft.close()
+    print('testdata_seq:',len(testdata))
+    
+    #進行建模
+    train_set = []
     for t in traindata:
         x, y = t
-        trainrow_x.extend(x)
-        trainrow_y.extend(y)
+        _set = []
+        for a in range(len(x)):
+            _set = ([x[a],y[a]])
+            train_set.append(_set)
     
-    train_x = []
-    train_y = []
-    
-    for i in trainrow_x:
-        for a in i:
-            train_x.append(a)
-    for i in trainrow_y:
-        for a in i:
-            #train_label.append(lambda a: a != 'S')
-            if a == 'S':
-                a = 1
-            else:
-                a = 0
-            train_y.append(a)
-            
-    print('trainX:',len(train_x))
-    print('trainY:',len(train_y))
+    classifier = nltk.classify.SklearnClassifier(LogisticRegression())
+    classifier.train(train_set)
 
-    token = Tokenizer(num_words = 100)  
-    token.fit_on_texts(train_x)  
-    c = 0  
-    for t,i in token.word_index.items():  
-        #print("\t'{}'\t{}".format(t, i))  
-        c += 1  
-        if c == 10:  
-            break  
-        
-    x_train_seq = token.texts_to_sequences(train_x)  
-    x_train = sequence.pad_sequences(x_train_seq, maxlen=MAX_LEN_OF_TOKEN)  
-    y_train = np.array(train_y)
-    y_train = to_categorical(y_train)   
-    
-    model = Sequential()
-    model.add(Embedding(20000, 128, input_length=MAX_LEN_OF_TOKEN))
-    model.add(Bidirectional(LSTM(64)))
-    model.add(Dropout(0.5))
-    model.add(Dense(2, activation='softmax'))
-    model.compile('adam', 'categorical_crossentropy', metrics=['accuracy'])
-    
-    model.summary()
-    #進行建模
-    train_history = model.fit(x_train, y_train, batch_size=32, epochs=10, verbose=2)
-    
     #建立訓練模型檔案
-    model.save(modelname)
-    #model.load_weights('my_model_weights.h5')
-
+    fm = open(modelname, 'wb')
+    pickle.dump(classifier, fm)
+    fm.close()
+    
     if roundtext == len(rowdata):
         print('Last Round')
         break
-           
+    
     #開始測試
     print (datetime.datetime.now())
     print ("Start closed testing...")
@@ -246,36 +234,26 @@ for i in range(len(alldata)):
     Npp = []
     f.write(str(log_text))
     log_text = ''
-    
     while testdata:
-        x = []
         yref = []
-        _x, _yref = testdata.pop()
-        for i in _x:
-            for a in i:
-                x.append(a)
-        for i in _yref:
-            for a in i:
-                #train_label.append(lambda a: a != 'S')
-                if a == 'S':
-                    a = 1
-                else:
-                    a = 0
-                yref.append(a)
-        #LSTM需要轉換
-        x_test_seq = token.texts_to_sequences(x)  
-        x_test = sequence.pad_sequences(x_test_seq, maxlen=MAX_LEN_OF_TOKEN)
-        
-        yout = model.predict_classes(x_test)
-        #pr = tagger.probability(yref)
-        p_1 = 0
-        p_2 = 0
-        prob = model.predict_proba(x_test)
-        for i in range(len(yout)):
-            p_1 = prob[i, 0]
-            Spp.append(p_1) #標記的機率
-            np_2p = prob[i, 1]
-            Npp.append(p_2)#標記的機率
+        yout = []
+        pro = []
+        x,y = testdata.pop()
+        for a in range(len(x)):
+            yref.append(y[a])
+            yout.append(classifier.classify(x[a]))
+            pro.append(classifier.prob_classify(x[a]))
+       
+        sp = 0
+        np = 0
+        for i in pro:
+            for label in i.samples():
+                sp = i.prob('S')
+                Spp.append(sp) #S標記的機率
+                #print(sp)
+                np = sp = i.prob('N')
+                Npp.append(np)#N標記的機率
+                #print(np)
         results.append(util.eval(yref, yout, "S"))
         
         score_array = []
@@ -314,13 +292,21 @@ for i in range(len(alldata)):
         text_score.append([str(testidx[i]),U_score])
         all_text_score[testidx[i]].append(U_score)
         
-   
-    f_score = f1_score(yref, yout)
-    r = recall_score(yref, yout)        
-    p = precision_score(yref, yout) 
+    tp, fp, fn, tn = zip(*results)
+    tp, fp, fn, tn = sum(tp), sum(fp), sum(fn), sum(tn)
+    #print(tp, fp, fn, tn)
+    if tp <= 0 or fp <= 0 :
+        p = 0
+        r = 0
+        f_score = 0
+    else :
+        p, r = tp/(tp+fp), tp/(tp+fn)
+        f_score = 2*p*r/(p+r)
     
     log_text += "----Test Result----\n"
-    
+    log_text += "Total tokens in Test Set:" + str(tp+fp+fn+tn) +'\n'
+    log_text += "Total S in REF:" + str(tp+fn) +'\n'
+    log_text += "Total S in OUT:" + str(tp+fp) +'\n'
     #log_text += "Pr:" + str(pr) +'\n'
     log_text += "Presicion:" + str(p) +'\n'
     log_text += "Recall:" + str(r) +'\n'
@@ -347,6 +333,9 @@ for i in range(len(alldata)):
     
     _data_log.insert(0,str(roundtext))
     data_csv_text.append(_data_log)
+    print ("Total tokens in Test Set:", tp+fp+fn+tn)
+    print ("Total S in REF:", tp+fn)
+    print ("Total S in OUT:", tp+fp)
     print ("Presicion:", p)
     print ("Recall:", r)
     print ("F1-score:", f_score)
@@ -360,22 +349,16 @@ for i in range(len(alldata)):
     
 #整理CSV需要的資料
 #allround = (numpy.arange(len(rowdata) )) #跑不同模型計算斜率用
-allround = (numpy.arange(len(rowdata) - 1)) #計算斜率用
-
+allround = (numpy.arange(len(rowdata) - 1)) #正常計算斜率用
 avr_pre = numpy.mean(all_pre)
 avr_recall = numpy.mean(all_recall)
 avr_fscore = numpy.mean(all_fscore)
 max_pre = numpy.max(all_pre)
 max_recall = numpy.max(all_recall)
 max_fscore = numpy.max(all_fscore)
-print(allround)
-print(all_pre)
-
-slope_pre = linregress(allround, all_pre.tolist())  
- 
+slope_pre = linregress(allround, all_pre.tolist())   
 slope_recall = linregress(allround, all_recall.tolist())   
 slope_fscore = linregress(allround, all_fscore.tolist())   
-
 avr_data_log = ['Avr',avr_pre,avr_recall,avr_fscore]
 max_data_log = ['Max',max_pre,max_recall,max_fscore]
 slope_data_log = ['Slope',slope_pre.slope,slope_recall.slope,slope_fscore.slope]

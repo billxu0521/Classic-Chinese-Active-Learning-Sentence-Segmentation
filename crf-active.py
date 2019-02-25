@@ -52,7 +52,7 @@ def file_to_lines(filenames):
     file.close()    
     
 #宣告起始資料
-dataname = 'ws'
+dataname = '24s-2'
 material = 'data/' + dataname + '/*'
 dictfile = dataname + '_word2vec.model.txt'
 crfmethod = "lbfgs"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}

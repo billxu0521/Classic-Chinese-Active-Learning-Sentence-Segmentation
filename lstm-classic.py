@@ -54,7 +54,7 @@ def file_to_lines(filenames):
     file.close()    
 
 #宣告起始資料
-dataname = '24s-1'
+dataname = 'sumen'
 material = 'data/' + dataname + '/*'
 rowdata = []
 #features = 1 #資料清洗模式
@@ -82,7 +82,7 @@ vdict = []
 
 #建立LOG
 filedatetime = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%dT%H%M%S')
-f = open(filedatetime + "_" + str(dataname) + "_CRF_classic_round_log.txt", 'w')
+f = open(filedatetime + "_" + str(dataname) + "_LSTMㄌ_classic_round_log.txt", 'w')
 
 #這邊處理CSV需要的資訊
 all_pre = numpy.array([])
@@ -306,8 +306,7 @@ for i in range(len(alldata)):
         All_u_score += U_score
         text_score.append([str(testidx[i]),U_score])
         all_text_score[testidx[i]].append(U_score)
-        
-   
+    
     f_score = f1_score(yref, yout)
     r = recall_score(yref, yout)        
     p = precision_score(yref, yout) 

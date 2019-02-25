@@ -33,7 +33,6 @@ def dataary(li,gram,features,vdict):
             d = crf.x_seq_to_features_both(x, vdict, charstop,gram), y
         #d = crf.x_seq_to_features_discrete(x, charstop,gram), y
         data.append(d)
-    
     return data
 
 #讀檔
@@ -52,7 +51,7 @@ def file_to_lines(filenames):
     file.close()    
 
 #宣告起始資料
-dataname = 'ws'
+dataname = '24s-2'
 material = 'data/' + dataname + '/*'
 dictfile = dataname + '_word2vec.model.txt'
 crfmethod = "lbfgs"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
@@ -209,7 +208,7 @@ for i in range(len(alldata)):
     trainer.train(modelname)
     
     tagger = pycrfsuite.Tagger()
-    #modelname = 'data24s-13True.m'
+    #modelname = 'result/sumen/datasumen_CRF_classic_round_3gram.m'
     
     #建立訓練模型檔案
     tagger.open(modelname)
@@ -218,6 +217,7 @@ for i in range(len(alldata)):
     if roundtext == len(rowdata):
         print('Last Round')
         break
+    
     #開始測試
     print (datetime.datetime.now())
     print ("Start closed testing...")
@@ -327,11 +327,16 @@ for i in range(len(alldata)):
     print ("F1-score:", f_score)
     f.write(str(log_text))
     #重置
+    if roundtext == len(rowdata):
+        print('Last Round')
+        #break
     log_text = ''
+    #traindataidx[(roundtext - 1)] = 1
     trainer.clear() 
     
 #整理CSV需要的資料
-allround = (numpy.arange(len(rowdata) - 1)) #計算斜率用
+#allround = (numpy.arange(len(rowdata) )) #跑不同模型計算斜率用
+allround = (numpy.arange(len(rowdata) - 1)) #正常計算斜率用
 avr_pre = numpy.mean(all_pre)
 avr_recall = numpy.mean(all_recall)
 avr_fscore = numpy.mean(all_fscore)
