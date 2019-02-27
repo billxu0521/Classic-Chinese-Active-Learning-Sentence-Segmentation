@@ -1,0 +1,128 @@
+Part:0/count:3281
+Part:1/count:1735
+Part:2/count:2578
+Part:3/count:1915
+Part:4/count:2267
+Part:5/count:1645
+Part:6/count:1921
+Part:7/count:1725
+Part:8/count:3127
+Part:9/count:2379
+All_text_count:22573
+Starting Time:2019-02-25 14:52:57.462336
+=====Round:1======
+----Test Result----
+Total tokens in Test Set:20483.0
+Total S in REF:4697.0
+Total S in OUT:1256.0
+Presicion:0.9864649681528662
+Recall:0.2637853949329359
+F1-Score:0.41626070888627575
+
+=============
+End Time:2019-02-25 14:53:49.512829
+
+Starting Time:2019-02-25 14:53:49.513781
+=====Round:2======
+----Test Result----
+Total tokens in Test Set:18438.0
+Total S in REF:4239.0
+Total S in OUT:1267.0
+Presicion:0.9668508287292817
+Recall:0.28898325076669024
+F1-Score:0.4449691245913549
+
+=============
+End Time:2019-02-25 14:54:26.516111
+
+Starting Time:2019-02-25 14:54:26.517435
+=====Round:3======
+----Test Result----
+Total tokens in Test Set:16402.0
+Total S in REF:3769.0
+Total S in OUT:1241.0
+Presicion:0.9468170829975826
+Recall:0.3117537808437251
+F1-Score:0.46906187624750495
+
+=============
+End Time:2019-02-25 14:54:57.498868
+
+Starting Time:2019-02-25 14:54:57.499452
+=====Round:4======
+----Test Result----
+Total tokens in Test Set:14010.0
+Total S in REF:3209.0
+Total S in OUT:1237.0
+Presicion:0.9029911075181891
+Recall:0.3480835151137426
+F1-Score:0.5024741340530813
+
+=============
+End Time:2019-02-25 14:55:21.754984
+
+Starting Time:2019-02-25 14:55:21.755898
+=====Round:5======
+----Test Result----
+Total tokens in Test Set:10687.0
+Total S in REF:2424.0
+Total S in OUT:1056.0
+Presicion:0.9043560606060606
+Recall:0.39397689768976896
+F1-Score:0.5488505747126436
+
+=============
+End Time:2019-02-25 14:55:36.983089
+
+Starting Time:2019-02-25 14:55:36.983498
+=====Round:6======
+----Test Result----
+Total tokens in Test Set:8153.0
+Total S in REF:1843.0
+Total S in OUT:860.0
+Presicion:0.8988372093023256
+Recall:0.41942485078676073
+F1-Score:0.5719570847206807
+
+=============
+End Time:2019-02-25 14:55:47.383304
+
+Starting Time:2019-02-25 14:55:47.385024
+=====Round:7======
+----Test Result----
+Total tokens in Test Set:5432.0
+Total S in REF:1228.0
+Total S in OUT:589.0
+Presicion:0.8964346349745331
+Recall:0.42996742671009774
+F1-Score:0.5811777655476059
+
+=============
+End Time:2019-02-25 14:55:53.813615
+
+Starting Time:2019-02-25 14:55:53.814968
+=====Round:8======
+----Test Result----
+Total tokens in Test Set:3677.0
+Total S in REF:852.0
+Total S in OUT:429.0
+Presicion:0.9114219114219114
+Recall:0.45892018779342725
+F1-Score:0.6104605776736924
+
+=============
+End Time:2019-02-25 14:55:57.947639
+
+Starting Time:2019-02-25 14:55:57.948710
+=====Round:9======
+----Test Result----
+Total tokens in Test Set:1835.0
+Total S in REF:423.0
+Total S in OUT:226.0
+Presicion:0.8938053097345132
+Recall:0.47754137115839246
+F1-Score:0.6224961479198768
+
+=============
+End Time:2019-02-25 14:56:00.721683
+
