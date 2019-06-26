@@ -21,7 +21,7 @@ from keras.layers.embeddings import Embedding
 from keras.layers import Input,Activation,Embedding,LSTM,TimeDistributed,Dense,Bidirectional,InputLayer,Dropout,Flatten
 from keras.utils import to_categorical
 import numpy as np
-from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
+from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score,specificity_score
 from scipy.stats import linregress
 
 
@@ -30,11 +30,28 @@ def dataary(rowdata):
     data_x = []
     data_y = []
     data = []
+    lineary = ''
+    for _line in li:   
+        lineary += _line
+        
+    lineary = lineary.replace("：", "")
+    lineary = lineary.replace("、", "")
+    lineary = lineary.replace("！", "")
+    lineary = lineary.replace(".", "")
+    lineary = lineary.replace("？", "")
+    lineary = lineary.replace("》", "")
+    lineary = lineary.replace("《", "")
+    
+    x, y = util.line_toseq(lineary.pop(), charstop)
+    data_x.append(x)
+    data_y.append(y)
+    
+    '''
     while rowdata:
         x, y = util.line_toseq(rowdata.pop(), charstop)
         data_x.append(x)
         data_y.append(y)
-
+    '''
     data.append([data_x,data_y])
     return data
 

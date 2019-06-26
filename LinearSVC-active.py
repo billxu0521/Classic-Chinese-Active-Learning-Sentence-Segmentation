@@ -22,19 +22,29 @@ import pickle
 #資料處理
 def dataary(li,gram,features,vdict):
     data = []
-    for line in li:          
-        x, y = util.line_toseq(line, charstop)
-        #print(x)
-        #print(y[:5])
-        #這邊在做文本做gram
-        if features == 1:
-            d = crf.x_seq_to_features_discrete(x, charstop,gram), y
-        elif features == 2:
-            d = crf.x_seq_to_features_vector(x, vdict, charstop), y
-        elif features == 3:
-            d = crf.x_seq_to_features_both(x, vdict, charstop,gram), y
-        #d = crf.x_seq_to_features_discrete(x, charstop,gram), y
-        data.append(d)
+    lineary = ''
+    for _line in li:   
+        lineary += _line
+    
+    lineary = lineary.replace("：", "")
+    lineary = lineary.replace("、", "")
+    lineary = lineary.replace("！", "")
+    lineary = lineary.replace(".", "")
+    lineary = lineary.replace("？", "")
+    lineary = lineary.replace("》", "")
+    lineary = lineary.replace("《", "")
+    x, y = util.line_toseq(lineary, charstop)
+    del y[0]
+    y = y + ['N']
+    #這邊在做文本做gram
+    if features == 1:
+        d = crf.x_seq_to_features_discrete(x, charstop,gram), y
+    elif features == 2:
+        d = crf.x_seq_to_features_vector(x, vdict, charstop), y
+    elif features == 3:
+        d = crf.x_seq_to_features_both(x, vdict, charstop,gram), y
+    #d = crf.x_seq_to_features_discrete(x, charstop,gram), y
+    data.append(d)
     return data
 
 #讀檔
@@ -89,12 +99,13 @@ f = open(filedatetime + "_" + str(dataname) + "_LinSVC_active_round_log.txt", 'w
 #這邊處理CSV需要的資訊
 all_pre = numpy.array([])
 all_recall = numpy.array([])
+all_speci = numpy.array([])
 all_fscore = numpy.array([])
 all_textcount = numpy.array([])
 all_segcount = numpy.array([])
 all_text_score = []#紀錄每個區塊的不確定
 log_csv_text = [['Type','Round','Test Part','Presicion','Recall','F1-score','U-score']]
-data_csv_text = [['','Presicion','Recall','F1-score']] #分析表標題
+data_csv_text = [['','Presicion','Recall','Specificity','F1-score']] #分析表標題
 log_text = ''
 
 #資料處理
@@ -304,9 +315,10 @@ for i in range(len(alldata)):
     if tp <= 0 or fp <= 0 :
         p = 0
         r = 0
+        s = 0
         f_score = 0
     else :
-        p, r = tp/(tp+fp), tp/(tp+fn)
+        p, r, s= tp/(tp+fp), tp/(tp+fn) ,tn/(fp+tn)
         f_score = 2*p*r/(p+r)
     
     log_text += "----Test Result----\n"
@@ -324,10 +336,12 @@ for i in range(len(alldata)):
     #建立分析表資料
     all_pre = numpy.append(all_pre,p)
     all_recall = numpy.append(all_recall,r)
+    all_speci = numpy.append(all_speci,s)
     all_fscore = numpy.append(all_fscore,f_score)
     _data_log = []
     _data_log.append(str(p)) 
     _data_log.append(str(r)) 
+    _data_log.append(str(s)) 
     _data_log.append(str(f_score))
     _data_log.extend([None] * len(rowdata))
     
@@ -335,7 +349,7 @@ for i in range(len(alldata)):
     log_csv_text.append(['test-score',str(roundtext),'',str(p),str(r),str(f_score),''])
     for a in  range(len(text_score)):
         log_csv_text.append(['Un-score',str(roundtext),str(text_score[a][0]),'','','',str(text_score[a][1])])
-        _data_log[int(text_score[a][0])+3] = str(text_score[a][1])
+        _data_log[int(text_score[a][0])+4] = str(text_score[a][1])
     
     _data_log.insert(0,str(roundtext))
     data_csv_text.append(_data_log)
@@ -358,16 +372,19 @@ for i in range(len(alldata)):
 allround = (numpy.arange(len(rowdata) - 1)) #正常計算斜率用
 avr_pre = numpy.mean(all_pre)
 avr_recall = numpy.mean(all_recall)
+avr_speci = numpy.mean(all_speci)
 avr_fscore = numpy.mean(all_fscore)
 max_pre = numpy.max(all_pre)
 max_recall = numpy.max(all_recall)
+max_speci = numpy.max(all_speci)
 max_fscore = numpy.max(all_fscore)
 slope_pre = linregress(allround, all_pre.tolist())   
-slope_recall = linregress(allround, all_recall.tolist())   
+slope_recall = linregress(allround, all_recall.tolist()) 
+slope_speci = linregress(allround, all_speci.tolist())   
 slope_fscore = linregress(allround, all_fscore.tolist())   
-avr_data_log = ['Avr',avr_pre,avr_recall,avr_fscore]
-max_data_log = ['Max',max_pre,max_recall,max_fscore]
-slope_data_log = ['Slope',slope_pre.slope,slope_recall.slope,slope_fscore.slope]
+avr_data_log = ['Avr',avr_pre,avr_recall,avr_speci,avr_fscore]
+max_data_log = ['Max',max_pre,max_recall,max_speci,max_fscore]
+slope_data_log = ['Slope',slope_pre.slope,slope_recall.slope,slope_speci.slope,slope_fscore.slope]
 all_count_log = ['AllTextCount','','',''] 
 all_segcount_log = ['AllSegCount','','',''] 
 all_textseg_log = ['','','','']  #斷句率
