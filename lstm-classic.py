@@ -54,7 +54,7 @@ def file_to_lines(filenames):
     file.close()    
 
 #宣告起始資料
-dataname = 'sumen'
+dataname = 'ws3'
 material = 'data/' + dataname + '/*'
 rowdata = []
 #features = 1 #資料清洗模式
@@ -65,7 +65,7 @@ filenames = sorted(filenames)
 part_log = filenames #紀錄檔名
 u_score_log = [] #紀錄各區塊分數
 starttime = datetime.datetime.now()
-MAX_LEN_OF_TOKEN = 32  
+MAX_LEN_OF_TOKEN = 64
 
 print ("Starting Time:",starttime)
 
@@ -76,7 +76,7 @@ for fn in filenames:
 #random.shuffle(rowdata)#做亂數取樣
 #rowdata = ['1111','2222','33333']
 #建立對應的陣列，作為判別是否成為訓練資料 0為不作為訓練資料 1為做訓練資料
-traindataidx = numpy.zeros(len(rowdata),int) #陣列長度
+traindataidx = numpy.ones(len(rowdata),int) #陣列長度
 print(traindataidx)
 vdict = []
 
@@ -143,7 +143,7 @@ for i in range(len(alldata)):
     log_text += "=====Round:" + str(i+1) + "======" + "\n"
     
     #依序成為訓練資料
-    traindataidx[i] = 1
+    traindataidx[i] = 0
     #整理訓練資料與測試資料
     trainidx = [] #作為訓練資料的索引
     testidx = [] #作為測試資料的索引
@@ -159,10 +159,20 @@ for i in range(len(alldata)):
     testdata = []
     traindata = []
     c = 0
+    trainx = []
+    trainy = []
+    
+    
     for i in trainidx:
         for a in alldata[i]:
-            _d = a[0],a[1]
-            traindata.append(_d)
+            for x in a[0]:
+                for b in x:
+                    trainx.extend(b)
+            for x in a[1]:
+                for b in x:
+                    trainy.extend(b)
+    _d = trainx,trainy
+    traindata = _d  
             
     for i in testidx:
         for a in alldata[i]:
@@ -171,13 +181,9 @@ for i in range(len(alldata)):
      
     print('traindata_seq:',len(traindata))   
          
-    trainrow_x = []
-    trainrow_y = []
- 
-    for t in traindata:
-        x, y = t
-        trainrow_x.extend(x)
-        trainrow_y.extend(y)
+    trainrow_x = traindata[0]
+    trainrow_y = traindata[1]
+    
     
     train_x = []
     train_y = []
@@ -212,7 +218,7 @@ for i in range(len(alldata)):
     y_train = to_categorical(y_train)   
     
     model = Sequential()
-    model.add(Embedding(20000, 128, input_length=MAX_LEN_OF_TOKEN))
+    model.add(Embedding(10000, 128, input_length=MAX_LEN_OF_TOKEN))
     model.add(Bidirectional(LSTM(64)))
     model.add(Dropout(0.5))
     model.add(Dense(2, activation='softmax'))
@@ -228,7 +234,7 @@ for i in range(len(alldata)):
 
     if roundtext == len(rowdata):
         print('Last Round')
-        break
+        #break
            
     #開始測試
     print (datetime.datetime.now())
@@ -346,13 +352,13 @@ for i in range(len(alldata)):
     #重置
     if roundtext == len(rowdata):
         print('Last Round')
-        #break
+        break
     log_text = ''
-    #traindataidx[(roundtext - 1)] = 1
+    traindataidx[(roundtext - 1)] = 1
     
 #整理CSV需要的資料
-#allround = (numpy.arange(len(rowdata) )) #跑不同模型計算斜率用
-allround = (numpy.arange(len(rowdata) - 1)) #計算斜率用
+allround = (numpy.arange(len(rowdata) )) #跑不同模型計算斜率用
+#allround = (numpy.arange(len(rowdata) - 1)) #計算斜率用
 
 avr_pre = numpy.mean(all_pre)
 avr_recall = numpy.mean(all_recall)

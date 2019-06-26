@@ -8,8 +8,6 @@ Created on Mon Dec 10 01:45:48 2018
 import sys
 import glob
 import random
-import pycrfsuite
-import crf
 import util
 import datetime
 from urllib.parse import unquote
@@ -55,10 +53,9 @@ def file_to_lines(filenames):
     file.close()    
 
 #宣告起始資料
-dataname = 'ws2'
+dataname = 'ws3'
 material = 'data/' + dataname + '/*'
 dictfile = dataname + '_word2vec.model.txt'
-crfmethod = "lbfgs"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
 rowdata = []
 features = 1 #資料清洗模式
@@ -183,10 +180,16 @@ for i in range(len(alldata)):
     testdata = []
     traindata = []
     c = 0
+    train_x = []
+    train_y = []
     for i in trainidx:
         for a in alldata[i]:
-            _d = a[0],a[1]
-            traindata.append(_d)
+            #_d = a[0],a[1]
+            train_x.extend(a[0])
+            train_y.extend(a[1])
+            #traindata.append(_d)
+    _d = train_x,train_y
+    traindata = _d
     print('traindata_seq:',len(traindata))           
     #ft = open(dataname + str(roundtext) + '_c_test_log.txt', 'w')
     #ft.write(str(traindata))
@@ -212,12 +215,9 @@ for i in range(len(alldata)):
     
     #進行建模
     train_set = []
-    for t in traindata:
-        x, y = t
-        _set = []
-        for a in range(len(x)):
-            _set = ([x[a],y[a]])
-            train_set.append(_set)
+    for a in range(len(traindata[0])):
+        _set = ([traindata[0][a],traindata[1][a]])
+        train_set.append(_set)
     
     classifier = nltk.classify.SklearnClassifier(SVC(kernel='linear',probability=True))
     classifier.train(train_set)
@@ -248,7 +248,7 @@ for i in range(len(alldata)):
         for a in range(len(x)):
             yref.append(y[a])
             yout.append(classifier.classify(x[a]))
-            pro.append(classifier.prob_classify(x[a]))
+            pro.append(classifier.prob_classify_many(x[a]))
        
         sp = 0
         np = 0

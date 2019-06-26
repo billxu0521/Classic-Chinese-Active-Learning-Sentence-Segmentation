@@ -8,10 +8,9 @@ Created on Mon Dec 10 01:45:48 2018
 import sys
 import glob
 import random
-import pycrfsuite
-import crf
 import util
 import datetime
+import crf
 from urllib.parse import unquote
 import numpy
 import csv
@@ -54,10 +53,9 @@ def file_to_lines(filenames):
     file.close()    
 
 #宣告起始資料
-dataname = 'ws2'
+dataname = 'ws3'
 material = 'data/' + dataname + '/*'
 dictfile = dataname + '_word2vec.model.txt'
-crfmethod = "lbfgs"  # {‘lbfgs’, ‘l2sgd’, ‘ap’, ‘pa’, ‘arow’}
 charstop = True # True means label attributes to previous char
 rowdata = []
 features = 1 #資料清洗模式
@@ -76,7 +74,9 @@ for fn in filenames:
 #random.shuffle(rowdata)#做亂數取樣
 #rowdata = ['1111','2222','33333']
 #建立對應的陣列，作為判別是否成為訓練資料 0為不作為訓練資料 1為做訓練資料
-traindataidx = numpy.zeros(len(rowdata),int) #陣列長度
+#traindataidx = numpy.zeros(len(rowdata),int) #陣列長度
+traindataidx = numpy.ones(len(rowdata),int) #陣列長度
+
 print(traindataidx)
 vdict = []
 #讀取字典
@@ -158,7 +158,7 @@ for i in range(len(alldata)):
     log_text += "=====Round:" + str(i+1) + "======" + "\n"
     
     #依序成為訓練資料
-    traindataidx[i] = 1
+    traindataidx[i] = 0
     #整理訓練資料與測試資料
     trainidx = [] #作為訓練資料的索引
     testidx = [] #作為測試資料的索引
@@ -174,10 +174,16 @@ for i in range(len(alldata)):
     testdata = []
     traindata = []
     c = 0
+    train_x = []
+    train_y = []
     for i in trainidx:
         for a in alldata[i]:
-            _d = a[0],a[1]
-            traindata.append(_d)
+            #_d = a[0],a[1]
+            train_x.extend(a[0])
+            train_y.extend(a[1])
+            #traindata.append(_d)
+    _d = train_x,train_y
+    traindata = _d
     print('traindata_seq:',len(traindata))           
     #ft = open(dataname + str(roundtext) + '_c_test_log.txt', 'w')
     #ft.write(str(traindata))
@@ -195,13 +201,15 @@ for i in range(len(alldata)):
             #testdata.append(_d)
             test_data = a[0],a[1]
             testdata.append(test_data)
-
+            
     #ft = open(dataname + str(roundtext) + 'test_log.txt', 'w')
     #ft.write(str(testdata))
     #ft.close()
     print('testdata_seq:',len(testdata))
     
+    
     #進行建模
+    '''
     train_set = []
     for t in traindata:
         x, y = t
@@ -209,7 +217,12 @@ for i in range(len(alldata)):
         for a in range(len(x)):
             _set = ([x[a],y[a]])
             train_set.append(_set)
-    
+    '''
+    train_set = []
+    for a in range(len(traindata[0])):
+        _set = ([traindata[0][a],traindata[1][a]])
+        train_set.append(_set)
+        
     classifier = nltk.classify.SklearnClassifier(SVC(kernel='linear',probability=True))
     classifier.train(train_set)
 
@@ -220,7 +233,7 @@ for i in range(len(alldata)):
     
     if roundtext == len(rowdata):
         print('Last Round')
-        break
+        #break
     
     #開始測試
     print (datetime.datetime.now())
@@ -340,13 +353,13 @@ for i in range(len(alldata)):
     #重置
     if roundtext == len(rowdata):
         print('Last Round')
-        #break
+        break
     log_text = ''
-    #traindataidx[(roundtext - 1)] = 1
+    traindataidx[(roundtext - 1)] = 1
     
 #整理CSV需要的資料
-#allround = (numpy.arange(len(rowdata) )) #跑不同模型計算斜率用
-allround = (numpy.arange(len(rowdata) - 1)) #正常計算斜率用
+allround = (numpy.arange(len(rowdata) )) #跑不同模型計算斜率用
+#allround = (numpy.arange(len(rowdata) - 1)) #正常計算斜率用
 avr_pre = numpy.mean(all_pre)
 avr_recall = numpy.mean(all_recall)
 avr_fscore = numpy.mean(all_fscore)

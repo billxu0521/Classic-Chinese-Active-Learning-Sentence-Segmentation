@@ -54,7 +54,7 @@ def file_to_lines(filenames):
     file.close()    
 
 #宣告起始資料
-dataname = 'ws'
+dataname = 'ws2'
 material = 'data/' + dataname + '/*'
 rowdata = []
 #features = 1 #資料清洗模式
@@ -65,7 +65,7 @@ filenames = sorted(filenames)
 part_log = filenames #紀錄檔名
 u_score_log = [] #紀錄各區塊分數
 starttime = datetime.datetime.now()
-MAX_LEN_OF_TOKEN = 32  
+MAX_LEN_OF_TOKEN = 64  
 
 print ("Starting Time:",starttime)
 
